@@ -39,6 +39,7 @@ public class cliente {
 
             out.println("AUTH: " + email + " " + password);
 
+
         }catch (IOException e) {
             System.out.println("Erro ao conectar com o servidor: " + e.getMessage());
         }
