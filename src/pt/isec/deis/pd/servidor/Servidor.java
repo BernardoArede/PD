@@ -2,9 +2,7 @@ package pt.isec.deis.pd.servidor;
 
 import java.net.*;
 import java.io.*;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -19,8 +17,58 @@ public class Servidor  {
 
 
 
-    static boolean autenticarUtilizador(String username, String password) {
-        return username.equals("admin") && password.equals("admin");
+    static boolean loginUtilizador(String email, String password, String dbPath) {
+
+        String url = "jdbc:sqlite:" + dbPath;
+
+        String sql = "SELECT * FROM utilizador WHERE email = ? AND password = ?";
+
+        try (Connection connection = DriverManager.getConnection(url);
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+
+            preparedStatement.setString(1, email);
+            preparedStatement.setString(2, password);
+
+
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+
+            return resultSet.next();
+
+        } catch (SQLException e) {
+
+            System.out.println("Erro ao conectar à base de dados: " + e.getMessage());
+            return false;
+        }
+
+    }
+
+    static boolean registoUtilizador(String email, String password, String telefone, String dbPath) {
+
+        String url = "jdbc:sqlite:" + dbPath;
+
+         String sql = "INSERT INTO utilizador (email, password, telefone) VALUES (?, ?, ?)";
+
+        try (Connection conn = DriverManager.getConnection(url)) {
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+
+                pstmt.setString(1, email);
+                pstmt.setString(2, password);
+                pstmt.setString(3, telefone);
+
+
+                int rowsInserted = pstmt.executeUpdate();
+                return rowsInserted > 0;
+
+            }
+        } catch (SQLException e) {
+            System.out.println("Erro ao inserir utilizador na base de dados: " + e.getMessage());
+            return false;
+        }
+
+
     }
 
     private static void startHeartBeat(int listeningPort){
@@ -63,23 +111,18 @@ public class Servidor  {
         String dbFilePath;
         File dbFile;
 
-        // Verificar se foram passados os argumentos necessários
         if (args.length != 2) {
             System.out.println("Sintaxe: java Servidor [port] [fileDataBaseName]");
             return;
         }
 
-        // Obter o ficheiro da base de dados
         dbFilePath = args[1].trim();
         dbFile = new File(dbFilePath);
 
-        // Verificar se o ficheiro da base de dados existe
         if (!dbFile.exists()) {
             System.out.println("A diretoria " + dbFile + " não existe!");
             return;
         }
-
-        // Verificar permissões de leitura
         if (!dbFile.canRead()) {
             System.out.println("Sem permissões de leitura na diretoria " + dbFile + "!");
             return;
@@ -107,7 +150,7 @@ public class Servidor  {
 
                         System.out.println("Cliente conectado: " + socket.getInetAddress());
 
-                        ClientHandler clientHandler = new ClientHandler(socket, connection);
+                        ClientHandler clientHandler = new ClientHandler(socket, connection, dbFilePath);
                         Thread clientThread = new Thread(clientHandler);
                         clientThread.start();
 
@@ -137,10 +180,12 @@ public class Servidor  {
 class ClientHandler implements Runnable {
     private Socket socket;
     private Connection connection;
+    private String dbFilePath;
 
-    public ClientHandler(Socket socket, Connection connection) {
+    public ClientHandler(Socket socket, Connection connection, String dbFilePath) {
         this.socket = socket;
         this.connection = connection;
+        this.dbFilePath = dbFilePath;
     }
 
     @Override
@@ -156,12 +201,13 @@ class ClientHandler implements Runnable {
                 return;
             }
 
-            if (auth != null && auth.startsWith("AUTH")) {
+            if (auth != null && auth.startsWith("AUTH:")) {
                 String[] partes = auth.split(" ");
                 if (partes.length == 3) {
                     String username = partes[1];
                     String password = partes[2];
-                    if (Servidor.autenticarUtilizador(username, password)) {
+                    if (Servidor.loginUtilizador(username, password, dbFilePath)) {
+                        out.println("SUCCESS");
                         System.out.println("Autenticação bem sucedida para o cliente " + socket.getInetAddress());
 
                         //LOGICA GERAL DO PROGRAMA AQUI DENTRO
@@ -170,12 +216,32 @@ class ClientHandler implements Runnable {
 
                     } else {
                         System.out.println("Autenticação falhou para o cliente " + socket.getInetAddress());
+
                     }
                 } else {
                     System.out.println("Formato da autenticação errado");
                 }
             } else {
-                System.out.println("Nenhuma credencial enviada. Conexão encerrada");
+                if(auth != null &&  auth.startsWith("REGIST:")){
+                    String[] partes = auth.split(" ");
+                    if (partes.length == 4) {
+                        String username = partes[1];
+                        String password = partes[2];
+                        String telefone = partes[3];
+                        if(Servidor.registoUtilizador(username,password,telefone, dbFilePath)){
+                            out.println("SUCCESS");
+                            System.out.println("Dados registados com sucesso na base de dados");
+                        }else{
+                            out.println("FAIL REGISTER");
+                            System.out.println("O registo do utilizador na base de dados falhou");
+                        }
+                    }else{
+                        System.out.println("Formato da registro errado");
+                    }
+
+                }else {
+                    System.out.println("Nenhum dado para registo enviado");
+                }
             }
 
         } catch (SocketTimeoutException ex) {
@@ -183,6 +249,8 @@ class ClientHandler implements Runnable {
         } catch (IOException ex) {
             System.out.println("Problema de I/O ao atender o cliente: " + ex.getMessage());
         } finally {
+            /*Este trecho de codigo não pode estar aqui porque asssim a comunicação com cada cliente
+            vai ser finalizada de forma a que não possa acontecer uma comunicação continua*/
             try {
                 socket.close();
                 System.out.println("Socket do cliente foi encerrado");

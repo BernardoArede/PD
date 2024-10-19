@@ -6,6 +6,10 @@ import java.sql.Statement;
 
 public class CriarBaseDeDados {
 
+    public void criarBaseDados(String url){
+
+    }
+
     public static void main(String[] args) {
         // Caminho para o arquivo da base de dados SQLite (será criado se não existir)
         String url = "jdbc:sqlite:identifier.sqlite";
@@ -19,8 +23,10 @@ public class CriarBaseDeDados {
 
                 CREATE TABLE IF NOT EXISTS utilizador (
                     id_utilizador INTEGER PRIMARY KEY AUTOINCREMENT,
-                    nome TEXT NOT NULL,
-                    email TEXT NOT NULL UNIQUE
+                    email TEXT NOT NULL UNIQUE, 
+                    password TEXT NOT NULL,
+                    telefone NUMERIC NOT NULL UNIQUE
+                                      
                 );
 
                 CREATE TABLE IF NOT EXISTS grupo_utilizador (
@@ -65,7 +71,7 @@ public class CriarBaseDeDados {
                 );
                 """;
 
-        // Conexão à base de dados SQLite e execução do código SQL
+
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
             // Executar o SQL
