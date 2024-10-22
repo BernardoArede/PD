@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 
-public class CriarBaseDeDados {
+public class ManageDB {
 
     public void criarBaseDados(String url){
 
@@ -16,6 +16,11 @@ public class CriarBaseDeDados {
 
         // Código SQL para criar as tabelas
         String sql = """
+                
+                CREATE TABLE IF NOT EXISTS db_version(
+                db_version REAL PRIMARY KEY 
+);
+
                 CREATE TABLE IF NOT EXISTS grupo (
                     id_grupo INTEGER PRIMARY KEY AUTOINCREMENT,
                     nome TEXT NOT NULL

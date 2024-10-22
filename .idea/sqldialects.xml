@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
-    <file url="file://$PROJECT_DIR$/src/pt/isec/deis/pd/dataBase/CriarBaseDeDados.java" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/src/pt/isec/deis/pd/dataBase/ManageDB.java" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/src/pt/isec/deis/pd/servidor/Servidor.java" dialect="GenericSQL" />
   </component>
 </project>

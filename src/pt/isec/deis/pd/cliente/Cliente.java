@@ -8,7 +8,7 @@ import java.net.Socket;
 import java.util.Scanner;
 
 
-public class cliente {
+public class Cliente {
 
     public static void main(String[] args) {
 
@@ -59,12 +59,13 @@ public class cliente {
                     System.out.println(credenciais_resp);
 
                     if(credenciais_resp != null) {
-                        while(true){
-                            System.out.println("Estou ligado cliente com o identificador    " + email);
+                        login = true;
+                        while(login){
+                            System.out.println("Estou ligado cliente com o identificador " + email);
                             try{
                                 Thread.sleep(5000);
                             }catch (InterruptedException e){
-                                System.out.println("Erro ao pausar a execuação do cliente" + e.getMessage());
+                                System.out.println("Erro ao pausar a execuação do cliente " + e.getMessage());
                             }
                         }
                     }else{
@@ -81,7 +82,6 @@ public class cliente {
                         System.out.println("Digite o numero de telefone do Cliente: ");
                         String telefone_registo = sc.nextLine();
 
-
                         out.println("REGIST: " + email_registo + " " + password_registo + " " + telefone_registo);
 
                         String regist_resp;
@@ -92,8 +92,6 @@ public class cliente {
                         }
 
                         System.out.println(regist_resp);
-
-                        System.out.println("Deseja fazer login?(yes/no)");
                         break;
             }
 

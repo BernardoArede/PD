@@ -11,11 +11,25 @@ public class Servidor  {
     private static final int HEARTBEAT_INTERVAL = 10000; // Intervalo
     private static final int HEARTBEAT_PORT = 4444; //Porta de multicast
     private static final String HEARTBEAT_ADDRESS = "230.44.44.44"; //Address de multicast
-    private static final String DB_VERSION = "1.0"; //Versão da base de dados
-
     private static final int TIMEOUT = 60000;
 
+    static double getVersion(String dbPath) {
+    String url = "jdbc:sqlite:" + dbPath;
+    String sql = "SELECT db_version FROM db_version";
 
+    try (Connection connection = DriverManager.getConnection(url);
+         PreparedStatement preparedStatement = connection.prepareStatement(sql);
+         ResultSet resultSet = preparedStatement.executeQuery()) {
+
+        if (resultSet.next()) {
+            return resultSet.getDouble("version");
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return 0;
+}
 
     static boolean loginUtilizador(String email, String password, String dbPath) {
 
@@ -71,7 +85,7 @@ public class Servidor  {
 
     }
 
-    private static void startHeartBeat(int listeningPort){
+    private static void startHeartBeat(int listeningPort, Double version){
 
      Timer timer = new Timer(true); // "true" para rodar como daemon
 
@@ -80,7 +94,7 @@ public class Servidor  {
             public void run() {
                 try {
 
-                    String message = "Versão da base de dados: " + DB_VERSION
+                    String message = "Versão da base de dados: " + version
                             + ", Porto de escuta para backup: " + listeningPort;
 
                     // Envia a mensagem de heartbeat
@@ -91,7 +105,7 @@ public class Servidor  {
             }
         };
 
-        // Agendar a tarefa para rodar a cada 10 segundos
+
         timer.scheduleAtFixedRate(heartbeatTask, 0, HEARTBEAT_INTERVAL);
     }
 
@@ -107,6 +121,7 @@ public class Servidor  {
 
     public static void main(String[] args) throws IOException {
 
+
         int listeningPort;
         String dbFilePath;
         File dbFile;
@@ -118,6 +133,8 @@ public class Servidor  {
 
         dbFilePath = args[1].trim();
         dbFile = new File(dbFilePath);
+
+        Double version = getVersion(dbFilePath);
 
         if (!dbFile.exists()) {
             System.out.println("A diretoria " + dbFile + " não existe!");
@@ -136,7 +153,7 @@ public class Servidor  {
                 System.out.println("Conectado à base de dados SQLite com sucesso.");
 
                 // Iniciar o envio de heartbeats a cada 10 segundos
-                startHeartBeat(listeningPort);
+                startHeartBeat(listeningPort, version);
 
             try (ServerSocket serverSocket = new ServerSocket(listeningPort)) {
 
@@ -181,6 +198,7 @@ class ClientHandler implements Runnable {
     private Socket socket;
     private Connection connection;
     private String dbFilePath;
+    private boolean _islogged = false;
 
     public ClientHandler(Socket socket, Connection connection, String dbFilePath) {
         this.socket = socket;
@@ -208,9 +226,14 @@ class ClientHandler implements Runnable {
                     String password = partes[2];
                     if (Servidor.loginUtilizador(username, password, dbFilePath)) {
                         out.println("SUCCESS");
+                        _islogged =true;
                         System.out.println("Autenticação bem sucedida para o cliente " + socket.getInetAddress());
 
                         //LOGICA GERAL DO PROGRAMA AQUI DENTRO
+                        while(_islogged){
+
+
+                        }
 
 
 
