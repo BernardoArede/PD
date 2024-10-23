@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.sql.SQLOutput;
 import java.util.Scanner;
 
 
@@ -60,9 +61,15 @@ public class Cliente {
 
                     if(credenciais_resp != null) {
                         login = true;
-                        System.out.println("MENU:");
-                        System.out.println("1-Criar grupo");
+
                         while(login){
+                            System.out.println();
+                            System.out.println("MENU:");
+                            System.out.println("1- Criar grupo");
+                            System.out.println("2- Ver Grupos");
+                            System.out.println("3- Criar Convite");
+                            System.out.println("4- Ver Convites");
+                            System.out.println();
                             System.out.println("Escolhe uma opção do menu: ");
                             int option = sc.nextInt();
 
@@ -72,13 +79,24 @@ public class Cliente {
                                     System.out.println("Digite o nome do Grupo: ");
                                     String nome = sc.nextLine();
                                     out.println("GRUPO: " + nome);
-                                    String resp = in.readLine();
-                                    System.out.println("SERVIDOR->" + resp);
+                                    String resp_criar_grupo = in.readLine();
+                                    System.out.println("SERVIDOR->" + resp_criar_grupo);
                                     break;
                                     case 2:
                                         sc.nextLine();
-                                        System.out.println("ESCOLHESTE A OPÇÃO 2");
+                                        out.println("VER GRUPOS:");
+                                        String resp_ver_grupos;
+                                        while (!(resp_ver_grupos = in.readLine()).equals("FIM")) {
+                                            System.out.println(resp_ver_grupos);
+                                        }
                                         break;
+                                        case 3:
+                                            sc.nextLine();
+                                            out.println("CONVITES:");
+                                            System.out.println("Indique o utilizador que pretende convidar indicando o seu username(email):");
+                                            String guest = sc.nextLine();
+                                            out.println(guest);
+                                            break;
 
                             }
                         }

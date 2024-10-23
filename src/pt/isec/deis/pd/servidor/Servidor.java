@@ -11,7 +11,7 @@ public class Servidor  {
     private static final int HEARTBEAT_INTERVAL = 10000; // Intervalo
     private static final int HEARTBEAT_PORT = 4444; //Porta de multicast
     private static final String HEARTBEAT_ADDRESS = "230.44.44.44"; //Address de multicast
-    private static final int TIMEOUT = 60000;
+    private static final int TIMEOUT = 500000;
 
     static double getVersion(String dbPath) {
     String url = "jdbc:sqlite:" + dbPath;
@@ -218,8 +218,46 @@ public class Servidor  {
     return false;
 }
 
+   public static void imprimeGrupos(String username, String dbFilePath, PrintWriter out) {
+    String url = "jdbc:sqlite:" + dbFilePath;
+    String sql = """
+        SELECT g.nome 
+        FROM grupo g
+        INNER JOIN grupo_utilizador gu ON g.id_grupo = gu.id_grupo
+        INNER JOIN utilizador u ON gu.id_utilizador = u.id_utilizador
+        WHERE u.email = ?
+    """;
 
+    try (Connection connection = DriverManager.getConnection(url);
+         PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
+        // Definir o parâmetro da consulta
+        preparedStatement.setString(1, username);
+
+        // Executar a consulta
+        ResultSet resultSet = preparedStatement.executeQuery();
+
+        // Verificar se o utilizador pertence a algum grupo
+        boolean hasGroups = false;
+        while (resultSet.next()) {
+            hasGroups = true;
+            String groupName = resultSet.getString("nome");
+            out.println("Grupo: " + groupName);  // Enviar o nome do grupo para o cliente
+        }
+
+        if (!hasGroups) {
+            out.println("Não pertence a nenhum grupo.");
+        }
+
+        // Enviar "FIM" para indicar o término da lista
+        out.println("FIM");
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+        out.println("Erro ao recuperar grupos.");
+        out.println("FIM");  // Enviar "FIM" mesmo em caso de erro
+    }
+}
 
 
 
@@ -334,20 +372,28 @@ class ClientHandler implements Runnable {
                         //LOGICA GERAL DO PROGRAMA AQUI DENTRO
                         while(_islogged){
                             String command = in.readLine();
-                            if(command != null && command.startsWith("GRUPO:")){
-                                String groupName = command.split(":")[1].trim();
-                                if(Servidor.grupoExiste(groupName, dbFilePath)){
-                                    out.println("FAIL_GROUP_EXIST");
-                                }else{
-                                   if (Servidor.criarGrupo(groupName,username,dbFilePath)){
-                                       out.println("GROUP_CREATED");
-                                   }else{
-                                       out.println("FAIL_CREATE_GROUP");
-                                   }
+                            if(command !=null){
+                                if(command.startsWith("GRUPO:")){
+                                    String groupName = command.split(":")[1].trim();
+                                    if(Servidor.grupoExiste(groupName, dbFilePath)){
+                                        out.println("FAIL_GROUP_EXIST");
+                                    }else{
+                                        if (Servidor.criarGrupo(groupName,username,dbFilePath)){
+                                            out.println("GROUP_CREATED");
+                                        }else{
+                                            out.println("FAIL_CREATE_GROUP");
+                                        }
+                                    }
+                                }
+                                if (command.startsWith("VER GRUPOS:")){
+                                    Servidor.imprimeGrupos(username,dbFilePath,out);
+                                }
+                                if (command.startsWith("CONVITES:")){
+                                    String user_to_invite = in.readLine();
+                                    System.out.println(user_to_invite);
+                                   // Servidor.enviarConvite(user_to_invite,dbFilePath,out);
                                 }
                             }
-
-
 
                         }
                     } else {
