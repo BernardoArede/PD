@@ -22,13 +22,38 @@ public class Servidor  {
          ResultSet resultSet = preparedStatement.executeQuery()) {
 
         if (resultSet.next()) {
-            return resultSet.getDouble("version");
+            return resultSet.getDouble("db_version");
         }
     } catch (SQLException e) {
         e.printStackTrace();
     }
 
     return 0;
+}
+
+    static void upVersionDB(String dbPath) {
+    String url = "jdbc:sqlite:" + dbPath;
+    String selectSql = "SELECT db_version FROM db_version";
+    String updateSql = "UPDATE db_version SET db_version = ?";
+
+    try (Connection connection = DriverManager.getConnection(url);
+         PreparedStatement selectStatement = connection.prepareStatement(selectSql);
+         ResultSet resultSet = selectStatement.executeQuery()) {
+
+        if (resultSet.next()) {
+            double currentVersion = resultSet.getDouble("db_version");
+            double newVersion = currentVersion + 0.1;
+
+            try (PreparedStatement updateStatement = connection.prepareStatement(updateSql)) {
+                updateStatement.setDouble(1, newVersion);
+                updateStatement.executeUpdate();
+                System.out.println("Versão atualizada para: " + newVersion);
+            }
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
 }
 
     static boolean loginUtilizador(String email, String password, String dbPath) {
@@ -85,7 +110,7 @@ public class Servidor  {
 
     }
 
-    private static void startHeartBeat(int listeningPort, Double version){
+    private static void startHeartBeat(int listeningPort, String dbPath){
 
      Timer timer = new Timer(true); // "true" para rodar como daemon
 
@@ -94,7 +119,7 @@ public class Servidor  {
             public void run() {
                 try {
 
-                    String message = "Versão da base de dados: " + version
+                    String message = "Versão da base de dados: " + getVersion(dbPath)
                             + ", Porto de escuta para backup: " + listeningPort;
 
                     // Envia a mensagem de heartbeat
@@ -119,6 +144,85 @@ public class Servidor  {
         }
     }
 
+    public static boolean grupoExiste(String groupName, String dbFilePath) {
+    String url = "jdbc:sqlite:" + dbFilePath;
+    String sql = "SELECT COUNT(*) FROM grupo WHERE nome = ?";
+
+    try (Connection connection = DriverManager.getConnection(url);
+         PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+        preparedStatement.setString(1, groupName);
+        ResultSet resultSet = preparedStatement.executeQuery();
+
+        if (resultSet.next() && resultSet.getInt(1) > 0) {
+            return true;  // Grupo já existe
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return false;  // Grupo não existe
+}
+
+    public static boolean criarGrupo(String groupName, String creatorEmail, String dbFilePath) {
+    String url = "jdbc:sqlite:" + dbFilePath;
+    String sqlInsertGroup = "INSERT INTO grupo(nome) VALUES(?)";
+    String sqlGetUserId = "SELECT id_utilizador FROM utilizador WHERE email = ?";
+    String sqlGetGroupId = "SELECT id_grupo FROM grupo WHERE nome = ?";
+    String sqlAddMember = "INSERT INTO grupo_utilizador(id_grupo, id_utilizador) VALUES(?, ?)";
+
+    try (Connection connection = DriverManager.getConnection(url)) {
+        connection.setAutoCommit(false);  // Usar transações
+
+        try (PreparedStatement insertGroupStmt = connection.prepareStatement(sqlInsertGroup);
+             PreparedStatement getUserIdStmt = connection.prepareStatement(sqlGetUserId);
+             PreparedStatement getGroupIdStmt = connection.prepareStatement(sqlGetGroupId);
+             PreparedStatement addMemberStmt = connection.prepareStatement(sqlAddMember)) {
+
+            // Inserir o grupo
+            insertGroupStmt.setString(1, groupName);
+            insertGroupStmt.executeUpdate();
+
+            // Obter o ID do utilizador que criou o grupo
+            getUserIdStmt.setString(1, creatorEmail);
+            ResultSet userIdResult = getUserIdStmt.executeQuery();
+            if (!userIdResult.next()) {
+                connection.rollback();  // Se não encontrar o utilizador, desfaz a transação
+                return false;
+            }
+            int userId = userIdResult.getInt("id_utilizador");
+
+            // Obter o ID do grupo recém-criado
+            getGroupIdStmt.setString(1, groupName);
+            ResultSet groupIdResult = getGroupIdStmt.executeQuery();
+            if (!groupIdResult.next()) {
+                connection.rollback();  // Se não encontrar o grupo, desfaz a transação
+                return false;
+            }
+            int groupId = groupIdResult.getInt("id_grupo");
+
+            // Adicionar o criador como membro do grupo
+            addMemberStmt.setInt(1, groupId);
+            addMemberStmt.setInt(2, userId);
+            addMemberStmt.executeUpdate();
+
+            connection.commit();  // Confirma a transação
+            return true;
+        } catch (SQLException e) {
+            connection.rollback();  // Desfaz a transação em caso de erro
+            e.printStackTrace();
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return false;
+}
+
+
+
+
+
+
     public static void main(String[] args) throws IOException {
 
 
@@ -133,8 +237,6 @@ public class Servidor  {
 
         dbFilePath = args[1].trim();
         dbFile = new File(dbFilePath);
-
-        Double version = getVersion(dbFilePath);
 
         if (!dbFile.exists()) {
             System.out.println("A diretoria " + dbFile + " não existe!");
@@ -153,7 +255,7 @@ public class Servidor  {
                 System.out.println("Conectado à base de dados SQLite com sucesso.");
 
                 // Iniciar o envio de heartbeats a cada 10 segundos
-                startHeartBeat(listeningPort, version);
+                startHeartBeat(listeningPort, dbFilePath);
 
             try (ServerSocket serverSocket = new ServerSocket(listeningPort)) {
 
@@ -226,20 +328,30 @@ class ClientHandler implements Runnable {
                     String password = partes[2];
                     if (Servidor.loginUtilizador(username, password, dbFilePath)) {
                         out.println("SUCCESS");
-                        _islogged =true;
+                        _islogged = true;
                         System.out.println("Autenticação bem sucedida para o cliente " + socket.getInetAddress());
 
                         //LOGICA GERAL DO PROGRAMA AQUI DENTRO
                         while(_islogged){
+                            String command = in.readLine();
+                            if(command != null && command.startsWith("GRUPO:")){
+                                String groupName = command.split(":")[1].trim();
+                                if(Servidor.grupoExiste(groupName, dbFilePath)){
+                                    out.println("FAIL_GROUP_EXIST");
+                                }else{
+                                   if (Servidor.criarGrupo(groupName,username,dbFilePath)){
+                                       out.println("GROUP_CREATED");
+                                   }else{
+                                       out.println("FAIL_CREATE_GROUP");
+                                   }
+                                }
+                            }
+
 
 
                         }
-
-
-
                     } else {
                         System.out.println("Autenticação falhou para o cliente " + socket.getInetAddress());
-
                     }
                 } else {
                     System.out.println("Formato da autenticação errado");
@@ -252,6 +364,7 @@ class ClientHandler implements Runnable {
                         String password = partes[2];
                         String telefone = partes[3];
                         if(Servidor.registoUtilizador(username,password,telefone, dbFilePath)){
+                            Servidor.upVersionDB(dbFilePath);
                             out.println("SUCCESS");
                             System.out.println("Dados registados com sucesso na base de dados");
                         }else{
@@ -272,7 +385,7 @@ class ClientHandler implements Runnable {
         } catch (IOException ex) {
             System.out.println("Problema de I/O ao atender o cliente: " + ex.getMessage());
         } finally {
-            /*Este trecho de codigo não pode estar aqui porque asssim a comunicação com cada cliente
+            /*Este pedaço de codigo não pode estar aqui porque asssim a comunicação com cada cliente
             vai ser finalizada de forma a que não possa acontecer uma comunicação continua*/
             try {
                 socket.close();

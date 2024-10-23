@@ -60,12 +60,26 @@ public class Cliente {
 
                     if(credenciais_resp != null) {
                         login = true;
+                        System.out.println("MENU:");
+                        System.out.println("1-Criar grupo");
                         while(login){
-                            System.out.println("Estou ligado cliente com o identificador " + email);
-                            try{
-                                Thread.sleep(5000);
-                            }catch (InterruptedException e){
-                                System.out.println("Erro ao pausar a execuação do cliente " + e.getMessage());
+                            System.out.println("Escolhe uma opção do menu: ");
+                            int option = sc.nextInt();
+
+                            switch (option){
+                                case 1:
+                                    sc.nextLine();
+                                    System.out.println("Digite o nome do Grupo: ");
+                                    String nome = sc.nextLine();
+                                    out.println("GRUPO: " + nome);
+                                    String resp = in.readLine();
+                                    System.out.println("SERVIDOR->" + resp);
+                                    break;
+                                    case 2:
+                                        sc.nextLine();
+                                        System.out.println("ESCOLHESTE A OPÇÃO 2");
+                                        break;
+
                             }
                         }
                     }else{
