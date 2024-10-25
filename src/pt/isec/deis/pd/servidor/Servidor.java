@@ -426,83 +426,176 @@ public class Servidor  {
 }
 
     public static boolean inserirDespesa(String usernamePagador, String nomeGrupo, String descricao, double valor, List<String> participantes, String data, String dbFilePath) {
-                String url = "jdbc:sqlite:" + dbFilePath;
+    String url = "jdbc:sqlite:" + dbFilePath;
 
-                String sqlVerificarMembro = """
-                    SELECT gu.id_grupo 
-                    FROM grupo_utilizador gu 
-                    JOIN utilizador u ON gu.id_utilizador = u.id_utilizador 
-                    JOIN grupo g ON gu.id_grupo = g.id_grupo 
-                    WHERE u.email = ? AND g.nome = ?""";
+    String sqlVerificarMembro = """
+        SELECT gu.id_grupo 
+        FROM grupo_utilizador gu 
+        JOIN utilizador u ON gu.id_utilizador = u.id_utilizador 
+        JOIN grupo g ON gu.id_grupo = g.id_grupo 
+        WHERE u.email = ? AND g.nome = ?""";
 
-                String sqlInserirDespesa = "INSERT INTO despesa (descricao, valor, id_utilizador, id_grupo, data) VALUES (?, ?, ?, ?, ?)";
+    String sqlInserirDespesa = "INSERT INTO despesa (descricao, valor, id_utilizador, id_grupo, data) VALUES (?, ?, ?, ?, ?)";
 
-                String sqlInserirParticipacao = "INSERT INTO despesa_utilizador (id_despesa, id_utilizador, valor_participacao) VALUES (?, ?, ?)";
+    String sqlInserirParticipacao = "INSERT INTO despesa_utilizador (id_despesa, id_utilizador, valor_participacao) VALUES (?, ?, ?)";
 
-                String sqlObterIdUtilizador = "SELECT id_utilizador FROM utilizador WHERE email = ?";
+    String sqlObterIdUtilizador = "SELECT id_utilizador FROM utilizador WHERE email = ?";
 
-                try (Connection connection = DriverManager.getConnection(url);
-                     PreparedStatement verificarMembroStmt = connection.prepareStatement(sqlVerificarMembro);
-                     PreparedStatement inserirDespesaStmt = connection.prepareStatement(sqlInserirDespesa, Statement.RETURN_GENERATED_KEYS);
-                     PreparedStatement inserirParticipacaoStmt = connection.prepareStatement(sqlInserirParticipacao);
-                     PreparedStatement obterIdUtilizadorStmt = connection.prepareStatement(sqlObterIdUtilizador)) {
+    try (Connection connection = DriverManager.getConnection(url);
+         PreparedStatement verificarMembroStmt = connection.prepareStatement(sqlVerificarMembro);
+         PreparedStatement inserirDespesaStmt = connection.prepareStatement(sqlInserirDespesa, Statement.RETURN_GENERATED_KEYS);
+         PreparedStatement inserirParticipacaoStmt = connection.prepareStatement(sqlInserirParticipacao);
+         PreparedStatement obterIdUtilizadorStmt = connection.prepareStatement(sqlObterIdUtilizador)) {
 
-                    verificarMembroStmt.setString(1, usernamePagador);
-                    verificarMembroStmt.setString(2, nomeGrupo);
-                    ResultSet resultSet = verificarMembroStmt.executeQuery();
+        // Verificar se o utilizador pagador pertence ao grupo
+        verificarMembroStmt.setString(1, usernamePagador);
+        verificarMembroStmt.setString(2, nomeGrupo);
+        ResultSet resultSet = verificarMembroStmt.executeQuery();
 
-                    if (!resultSet.next()) {
-                        return false;  // O utilizador pagador não pertence ao grupo
-                    }
+        if (!resultSet.next()) {
+            return false;  // O utilizador pagador não pertence ao grupo
+        }
 
-                    int grupoId = resultSet.getInt("id_grupo");
+        int grupoId = resultSet.getInt("id_grupo");
 
-                    obterIdUtilizadorStmt.setString(1, usernamePagador);
-                    ResultSet resultSetPagador = obterIdUtilizadorStmt.executeQuery();
-                    if (!resultSetPagador.next()) {
-                        return false;
-                    }
-                    int idPagador = resultSetPagador.getInt("id_utilizador");
+        // Obter ID do utilizador pagador
+        obterIdUtilizadorStmt.setString(1, usernamePagador);
+        ResultSet resultSetPagador = obterIdUtilizadorStmt.executeQuery();
+        if (!resultSetPagador.next()) {
+            return false;  // O utilizador pagador não foi encontrado
+        }
+        int idPagador = resultSetPagador.getInt("id_utilizador");
 
-                    inserirDespesaStmt.setString(1, descricao);
-                    inserirDespesaStmt.setDouble(2, valor);
-                    inserirDespesaStmt.setInt(3, idPagador);
-                    inserirDespesaStmt.setInt(4, grupoId);
-                    inserirDespesaStmt.setString(5, data);
-                    inserirDespesaStmt.executeUpdate();
+        // Inserir a despesa
+        inserirDespesaStmt.setString(1, descricao);
+        inserirDespesaStmt.setDouble(2, valor);
+        inserirDespesaStmt.setInt(3, idPagador);
+        inserirDespesaStmt.setInt(4, grupoId);
+        inserirDespesaStmt.setString(5, data);
+        inserirDespesaStmt.executeUpdate();
 
+        // Obter o ID da despesa inserida
+        ResultSet generatedKeys = inserirDespesaStmt.getGeneratedKeys();
+        if (!generatedKeys.next()) {
+            return false;  // Falha ao obter o ID da despesa
+        }
+        int despesaId = generatedKeys.getInt(1);
 
-                    ResultSet generatedKeys = inserirDespesaStmt.getGeneratedKeys();
-                    if (!generatedKeys.next()) {
-                        return false;  // Falha ao obter o ID da despesa
-                    }
-                    int despesaId = generatedKeys.getInt(1);
+        // Inserir participações
+        for (String participante : participantes) {
+            // Verificar se cada participante ainda pertence ao grupo
+            verificarMembroStmt.setString(1, participante);
+            verificarMembroStmt.setString(2, nomeGrupo);
+            ResultSet resultSetParticipante = verificarMembroStmt.executeQuery();
+            if (resultSetParticipante.next()) {
+                int idParticipante = resultSetParticipante.getInt("id_utilizador");
 
+                double valorParticipacao = valor / participantes.size();
 
-                    for (String participante : participantes) {
+                inserirParticipacaoStmt.setInt(1, despesaId);
+                inserirParticipacaoStmt.setInt(2, idParticipante);
+                inserirParticipacaoStmt.setDouble(3, valorParticipacao);
+                inserirParticipacaoStmt.executeUpdate();
+            } else {
+                System.out.println("O participante " + participante + " não pertence ao grupo " + nomeGrupo + " e não será adicionado.");
+            }
+        }
 
-                        obterIdUtilizadorStmt.setString(1, participante);
-                        ResultSet resultSetParticipante = obterIdUtilizadorStmt.executeQuery();
-                        if (resultSetParticipante.next()) {
-                            int idParticipante = resultSetParticipante.getInt("id_utilizador");
-
-
-                            double valorParticipacao = valor / participantes.size();
-
-
-                            inserirParticipacaoStmt.setInt(1, despesaId);
-                            inserirParticipacaoStmt.setInt(2, idParticipante);
-                            inserirParticipacaoStmt.setDouble(3, valorParticipacao);
-                            inserirParticipacaoStmt.executeUpdate();
-                        }
-                    }
-
-                    return true;  // Despesa inserida com sucesso
-                } catch (SQLException e) {
-                    System.out.println(e.getMessage());
-                    return false;
-                }
+        return true;  // Despesa inserida com sucesso
+    } catch (SQLException e) {
+        System.out.println(e.getMessage());
+        return false;
     }
+}
+
+    public static boolean eliminarGrupoPorNome(String nomeGrupo, String dbFilePath) {
+
+        String url = "jdbc:sqlite:" + dbFilePath;
+
+
+        String sqlVerificaDespesas = """
+            SELECT COUNT(*) as count 
+            FROM despesa 
+            WHERE id_grupo = (SELECT id_grupo FROM grupo WHERE nome = ?)
+            """;
+
+        String sqlVerificaDividas = """
+            SELECT COUNT(*) as count 
+            FROM despesa_utilizador 
+            WHERE id_despesa IN (
+                SELECT id_despesa 
+                FROM despesa 
+                WHERE id_grupo = (SELECT id_grupo FROM grupo WHERE nome = ?)
+            )
+            AND valor_participacao > 0
+            """;
+
+        String sqlEliminarGrupo = "DELETE FROM grupo WHERE nome = ?";
+
+        try (Connection connection = DriverManager.getConnection(url);
+             PreparedStatement verificaStmt = connection.prepareStatement(sqlVerificaDespesas);
+             PreparedStatement verificaDividasStmt = connection.prepareStatement(sqlVerificaDividas);
+             PreparedStatement eliminaStmt = connection.prepareStatement(sqlEliminarGrupo)) {
+
+            verificaStmt.setString(1, nomeGrupo);
+            ResultSet resultSet = verificaStmt.executeQuery();
+            if (resultSet.next() && resultSet.getInt("count") > 0) {
+
+                return false;
+            }
+            verificaDividasStmt.setString(1, nomeGrupo);
+            ResultSet resultSetDividas = verificaDividasStmt.executeQuery();
+            if (resultSetDividas.next() && resultSetDividas.getInt("count") > 0) {
+                return false;
+            }
+            eliminaStmt.setString(1, nomeGrupo);
+            eliminaStmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean sairDoGrupo(String nomeGrupo, String username, String dbFilePath) {
+        String url = "jdbc:sqlite:" + dbFilePath;
+
+        String sqlVerificaDespesas = """
+            SELECT COUNT(*) as count 
+            FROM despesa 
+            WHERE id_grupo = (SELECT id_grupo FROM grupo WHERE nome = ?) 
+            AND id_utilizador = (SELECT id_utilizador FROM utilizador WHERE email = ?)
+        """;
+
+        String sqlSairDoGrupo = "DELETE FROM grupo_utilizador WHERE id_grupo = (SELECT id_grupo FROM grupo WHERE nome = ?) AND id_utilizador = (SELECT id_utilizador FROM utilizador WHERE email = ?)";
+
+        try (Connection connection = DriverManager.getConnection(url);
+             PreparedStatement verificaStmt = connection.prepareStatement(sqlVerificaDespesas);
+             PreparedStatement saiStmt = connection.prepareStatement(sqlSairDoGrupo)) {
+
+            // Verifica se existem despesas associadas ao utilizador no grupo
+            verificaStmt.setString(1, nomeGrupo);
+            verificaStmt.setString(2, username);
+            ResultSet resultSet = verificaStmt.executeQuery();
+
+            if (resultSet.next() && resultSet.getInt("count") > 0) {
+                // Existem despesas associadas ao utilizador no grupo
+                return false;
+            }
+
+            // Se não houver despesas, sai do grupo
+            saiStmt.setString(1, nomeGrupo);
+            saiStmt.setString(2, username);
+            int rowsAffected = saiStmt.executeUpdate();
+
+            // Retorna true se o utilizador saiu com sucesso do grupo
+            return rowsAffected > 0;
+
+        } catch (SQLException e) {
+            System.out.println("Erro ao sair do grupo: " + e.getMessage());
+            return false;
+        }
+}
 
     public static void main(String[] args) throws IOException {
 
@@ -696,8 +789,26 @@ class ClientHandler implements Runnable {
                                     } else {
                                         out.println("Erro ao inserir a despesa. Verifique os dados e tente novamente.");
                                     }
+                                }if (command.startsWith("ELIMINAR GRUPO:")) {
+                                    String[] partes3 = command.split(":");
+                                    if (partes3.length == 2) {
+                                        String nomeGrupo = partes3[1];
+                                        if (Servidor.eliminarGrupoPorNome(nomeGrupo, dbFilePath)) {
+                                            out.println("Grupo '" + nomeGrupo + "' eliminado com sucesso.");
+                                        } else {
+                                            out.println("Não foi possível eliminar o grupo. Existem despesas associadas ou o grupo não existe.");
+                                        }
+                                    } else {
+                                        out.println("Formato do comando errado.");
+                                    }
+                                }if (command.startsWith("SAIR DO GRUPO:")) {
+                                    String nomeGrupo = command.split(":")[1];
+                                    if (Servidor.sairDoGrupo(nomeGrupo, username, dbFilePath)) {
+                                        out.println("Você saiu do grupo '" + nomeGrupo + "' com sucesso.");
+                                    } else {
+                                        out.println("Não foi possível sair do grupo '" + nomeGrupo + "'. Verifique se há despesas associadas.");
+                                    }
                                 }
-
                             }
                         }
                     } else {
