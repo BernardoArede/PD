@@ -11,8 +11,8 @@ public class ManageDB {
     }
 
     public static void main(String[] args) {
-        // Caminho para o arquivo da base de dados SQLite (será criado se não existir)
-        String url = "jdbc:sqlite:identifier.sqlite";
+
+        String url = "jdbc:sqlite:src/resources/identifier.sqlite";
 
         // Código SQL para criar as tabelas
         String sql = """
@@ -20,6 +20,14 @@ public class ManageDB {
                 CREATE TABLE IF NOT EXISTS db_version(
                 db_version REAL PRIMARY KEY 
 );
+                CREATE TABLE IF NOT EXISTS convite (
+                    id_convite INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id_grupo INTEGER,
+                    id_utilizador_convidado INTEGER,
+                    estado TEXT DEFAULT 'pendente',
+                    FOREIGN KEY (id_grupo) REFERENCES grupo(id_grupo) ON DELETE CASCADE,
+                    FOREIGN KEY (id_utilizador_convidado) REFERENCES utilizador(id_utilizador) ON DELETE CASCADE
+                );
 
                 CREATE TABLE IF NOT EXISTS grupo (
                     id_grupo INTEGER PRIMARY KEY AUTOINCREMENT,

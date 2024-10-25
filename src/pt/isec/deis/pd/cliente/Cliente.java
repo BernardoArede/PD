@@ -5,7 +5,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.sql.SQLOutput;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 
 
@@ -63,12 +64,26 @@ public class Cliente {
                         login = true;
 
                         while(login){
-                            System.out.println();
+
+                            for(int i = 0;i<20;i++){
+                                System.out.println();
+                            }
                             System.out.println("MENU:");
                             System.out.println("1- Criar grupo");
                             System.out.println("2- Ver Grupos");
                             System.out.println("3- Criar Convite");
                             System.out.println("4- Ver Convites");
+                            System.out.println("5- Editar nome de grupo");
+                            System.out.println("6- Eliminar um grupo");
+                            System.out.println("7- Sair do grupo");
+                            System.out.println("8- Adicionar uma despesa");
+                            System.out.println("9- Ver gastos totais do grupo");
+                            System.out.println("10- Ver histórico de despesas");
+                            System.out.println("11- Editar despesa");
+                            System.out.println("12- Eliminar despesa");
+                            System.out.println("13- Exportar para CSV detalhes do grupo");
+
+
                             System.out.println();
                             System.out.println("Escolhe uma opção do menu: ");
                             int option = sc.nextInt();
@@ -93,11 +108,88 @@ public class Cliente {
                                         case 3:
                                             sc.nextLine();
                                             out.println("CONVITES:");
-                                            System.out.println("Indique o utilizador que pretende convidar indicando o seu username(email):");
+                                            System.out.println("Indique o utilizador que pretende convidar indicando o seu username(email): ");
                                             String guest = sc.nextLine();
-                                            out.println(guest);
+                                            System.out.println("Indique o nome do grupo para o qual pretende convidar: ");
+                                            String group = sc.nextLine();
+                                            out.println("CONVIDADO:"+guest +  ":" + group);
                                             break;
+                                            case 4:
+                                                sc.nextLine();
+                                                out.println("VER CONVITES:");
+                                            
+                                                String response;
 
+                                                while (!(response = in.readLine()).equals("END")) {
+                                                    System.out.println(response);
+                                                }
+
+                                                response = in.readLine();
+                                                System.out.println(response);
+                                                String escolha = sc.nextLine();
+                                            
+                                                if (escolha.equalsIgnoreCase("sim")) {
+                                                    out.println(escolha);
+                                            
+
+                                                    response = in.readLine();
+                                                    System.out.println(response);
+                                                    String grupoEscolhido = sc.nextLine();
+                                                    out.println(grupoEscolhido);
+                                            
+
+                                                    response = in.readLine();
+                                                    System.out.println(response);
+                                                } else {
+                                                    out.println("Nenhum convite foi aceite.");
+                                                }
+                                                break;
+                                                case 5:
+                                                    sc.nextLine();
+                                                    System.out.println("Indique o nome do grupo que deseja editar:");
+                                                    String nomeAtualGrupo = sc.nextLine();
+                                                    System.out.println("Indique o novo nome para o grupo:");
+                                                    String novoNomeGrupo = sc.nextLine();
+
+                                                    out.println("EDITAR NOME GRUPO:" + nomeAtualGrupo + ":" + novoNomeGrupo);
+
+                                                    // Receber resposta do servidor
+                                                    String respostaEdicao = in.readLine();
+                                                    System.out.println(respostaEdicao);
+                                                    break;
+
+                                                    case 6:
+                                                        /*TODO Eliminar grupo caso não haja despesas associadas*/
+                                                        break;
+                                                        case 7:
+                                                            /*TODO Sair de um grupo*/
+                                                            break;
+                                                            case 8:
+                                                                sc.nextLine();
+                                                                System.out.println("Indique o nome do grupo:");
+                                                                String nomeGrupoDespesa = sc.nextLine();
+                                                                System.out.println("Descrição da despesa:");
+                                                                String descricaoDespesa = sc.nextLine();
+                                                                System.out.println("Valor da despesa:");
+                                                                double valorDespesa = sc.nextDouble();
+                                                                sc.nextLine();
+
+                                                                System.out.println("Data da despesa (formato YYYY-MM-DD):");
+                                                                String dataDespesa = sc.nextLine();
+
+                                                                System.out.println("Indique os usernames dos participantes (separados por vírgula):");
+                                                                String participantesInput = sc.nextLine();
+                                                                List<String> participantes = Arrays.asList(participantesInput.split(","));
+
+                                                                out.println("INSERIR DESPESA:" + nomeGrupoDespesa + ":" + descricaoDespesa + ":" + valorDespesa + ":" + dataDespesa);
+                                                                out.println(String.join(",", participantes));
+
+
+                                                                String respostaDespesa = in.readLine();
+                                                                System.out.println(respostaDespesa);
+                                                                break;
+                                default:
+                                    System.out.println("ERRO DE ESOLHA DE OPÇÃO");
                             }
                         }
                     }else{
@@ -133,3 +225,5 @@ public class Cliente {
         }
     }
 }
+
+

@@ -3,8 +3,9 @@ package pt.isec.deis.pd.servidor;
 import java.net.*;
 import java.io.*;
 import java.sql.*;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.Date;
 
 public class Servidor  {
 
@@ -25,7 +26,7 @@ public class Servidor  {
             return resultSet.getDouble("db_version");
         }
     } catch (SQLException e) {
-        e.printStackTrace();
+        System.out.println(e.getMessage());
     }
 
     return 0;
@@ -118,9 +119,8 @@ public class Servidor  {
             @Override
             public void run() {
                 try {
-
-                    String message = "Versão da base de dados: " + getVersion(dbPath)
-                            + ", Porto de escuta para backup: " + listeningPort;
+                        double version = getVersion(dbPath);
+                        String message = String.format("Versão da base de dados: %.1f, Porto de escuta para backup: %d", version, listeningPort);
 
                     // Envia a mensagem de heartbeat
                     sendHeartbeat(message);
@@ -218,7 +218,7 @@ public class Servidor  {
     return false;
 }
 
-   public static void imprimeGrupos(String username, String dbFilePath, PrintWriter out) {
+    public static void imprimeGrupos(String username, String dbFilePath, PrintWriter out) {
     String url = "jdbc:sqlite:" + dbFilePath;
     String sql = """
         SELECT g.nome 
@@ -259,7 +259,250 @@ public class Servidor  {
     }
 }
 
+    public static boolean enviarConvite(String usernameConvidado, String nomeGrupo, String dbFilePath) {
+        String url = "jdbc:sqlite:" + dbFilePath;
+        String sqlGetGroupId = "SELECT id_grupo FROM grupo WHERE nome = ?";
+        String sqlGetUserId = "SELECT id_utilizador FROM utilizador WHERE email = ?";
+        String sqlInsertConvite = "INSERT INTO convite(id_grupo, id_utilizador_convidado, estado) VALUES(?, ?, 'pendente')";
 
+        try (Connection connection = DriverManager.getConnection(url);
+             PreparedStatement getGroupIdStmt = connection.prepareStatement(sqlGetGroupId);
+             PreparedStatement getUserIdStmt = connection.prepareStatement(sqlGetUserId);
+             PreparedStatement insertConviteStmt = connection.prepareStatement(sqlInsertConvite)) {
+
+            getGroupIdStmt.setString(1, nomeGrupo);
+            ResultSet groupResultSet = getGroupIdStmt.executeQuery();
+            if (!groupResultSet.next()) {
+                return false;
+            }
+            int groupId = groupResultSet.getInt("id_grupo");
+
+
+            getUserIdStmt.setString(1, usernameConvidado);
+            ResultSet userResultSet = getUserIdStmt.executeQuery();
+            if (!userResultSet.next()) {
+                return false;  //Não encontrado o utilizador
+            }
+            int userId = userResultSet.getInt("id_utilizador");
+
+            // Criar o convite
+            insertConviteStmt.setInt(1, groupId);
+            insertConviteStmt.setInt(2, userId);
+            insertConviteStmt.executeUpdate();
+
+            return true;
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
+    }
+
+    public static List<String> listarConvitesPendentes(String username, String dbFilePath) {
+    String url = "jdbc:sqlite:" + dbFilePath;
+    String sqlGetUserId = "SELECT id_utilizador FROM utilizador WHERE email = ?";
+    String sqlGetConvites = """
+        SELECT g.nome 
+        FROM convite c
+        JOIN grupo g ON c.id_grupo = g.id_grupo
+        WHERE c.id_utilizador_convidado = ? AND c.estado = 'pendente'
+    """;
+
+    List<String> gruposPendentes = new ArrayList<>();
+
+    try (Connection connection = DriverManager.getConnection(url);
+         PreparedStatement getUserIdStmt = connection.prepareStatement(sqlGetUserId);
+         PreparedStatement getConvitesStmt = connection.prepareStatement(sqlGetConvites)) {
+
+        // Obter o ID do utilizador
+        getUserIdStmt.setString(1, username);
+        ResultSet userResultSet = getUserIdStmt.executeQuery();
+        if (!userResultSet.next()) {
+            return gruposPendentes;  // Utilizador não encontrado
+        }
+        int userId = userResultSet.getInt("id_utilizador");
+
+        // Obter convites pendentes
+        getConvitesStmt.setInt(1, userId);
+        ResultSet convitesResultSet = getConvitesStmt.executeQuery();
+
+        // Preencher a lista com os nomes dos grupos
+        while (convitesResultSet.next()) {
+            gruposPendentes.add(convitesResultSet.getString("nome"));
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return gruposPendentes;
+}
+
+    public static boolean aceitarConvite(String username, String nomeGrupo, String dbFilePath) {
+    String url = "jdbc:sqlite:" + dbFilePath;
+    String sqlGetGroupId = "SELECT id_grupo FROM grupo WHERE nome = ?";
+    String sqlGetUserId = "SELECT id_utilizador FROM utilizador WHERE email = ?";
+    String sqlUpdateConvite = "UPDATE convite SET estado = 'aceite ' WHERE id_grupo = ? AND id_utilizador_convidado = ? AND estado = 'pendente'";
+    String sqlAddUserToGroup = "INSERT INTO grupo_utilizador (id_grupo, id_utilizador) VALUES (?, ?)";
+
+    try (Connection connection = DriverManager.getConnection(url);
+         PreparedStatement getGroupIdStmt = connection.prepareStatement(sqlGetGroupId);
+         PreparedStatement getUserIdStmt = connection.prepareStatement(sqlGetUserId);
+         PreparedStatement updateConviteStmt = connection.prepareStatement(sqlUpdateConvite);
+         PreparedStatement addUserToGroupStmt = connection.prepareStatement(sqlAddUserToGroup)) {
+
+        // Obter o ID do grupo
+        getGroupIdStmt.setString(1, nomeGrupo);
+        ResultSet groupResultSet = getGroupIdStmt.executeQuery();
+        if (!groupResultSet.next()) {
+            return false;  // Grupo não encontrado
+        }
+        int groupId = groupResultSet.getInt("id_grupo");
+
+        // Obter o ID do utilizador
+        getUserIdStmt.setString(1, username);
+        ResultSet userResultSet = getUserIdStmt.executeQuery();
+        if (!userResultSet.next()) {
+            return false;  // Utilizador não encontrado
+        }
+        int userId = userResultSet.getInt("id_utilizador");
+
+        // Atualizar o estado do convite para "aceite"
+        updateConviteStmt.setInt(1, groupId);
+        updateConviteStmt.setInt(2, userId);
+        int rowsAffected = updateConviteStmt.executeUpdate();
+
+        if (rowsAffected == 0) {
+            return false;  // Nenhum convite pendente encontrado ou erro ao aceitar
+        }
+
+        // Adicionar o utilizador ao grupo
+        addUserToGroupStmt.setInt(1, groupId);
+        addUserToGroupStmt.setInt(2, userId);
+        addUserToGroupStmt.executeUpdate();
+
+        return true;
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
+
+    public static boolean editarNomeGrupo(String username, String nomeAtualGrupo, String novoNomeGrupo, String dbFilePath) {
+        String url = "jdbc:sqlite:" + dbFilePath;
+
+        String sqlVerificarMembro = """
+            SELECT gu.id_grupo 
+            FROM grupo_utilizador gu 
+            JOIN utilizador u ON gu.id_utilizador = u.id_utilizador 
+            JOIN grupo g ON gu.id_grupo = g.id_grupo 
+            WHERE u.email = ? AND g.nome = ?""";
+
+        String sqlAtualizarNomeGrupo = "UPDATE grupo SET nome = ? WHERE id_grupo = ?";
+
+        try (Connection connection = DriverManager.getConnection(url);
+             PreparedStatement verificarMembroStmt = connection.prepareStatement(sqlVerificarMembro);
+             PreparedStatement atualizarNomeGrupoStmt = connection.prepareStatement(sqlAtualizarNomeGrupo)) {
+
+            // Verificar se o utilizador é membro do grupo
+            verificarMembroStmt.setString(1, username);
+            verificarMembroStmt.setString(2, nomeAtualGrupo);
+            ResultSet resultSet = verificarMembroStmt.executeQuery();
+
+            if (!resultSet.next()) {
+                return false;  // Utilizador não é membro do grupo
+            }
+
+            int grupoId = resultSet.getInt("id_grupo");
+
+            // Atualizar o nome do grupo
+            atualizarNomeGrupoStmt.setString(1, novoNomeGrupo);
+            atualizarNomeGrupoStmt.setInt(2, grupoId);
+            atualizarNomeGrupoStmt.executeUpdate();
+
+            return true;  // Nome do grupo alterado com sucesso
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+}
+
+    public static boolean inserirDespesa(String usernamePagador, String nomeGrupo, String descricao, double valor, List<String> participantes, String data, String dbFilePath) {
+                String url = "jdbc:sqlite:" + dbFilePath;
+
+                String sqlVerificarMembro = """
+                    SELECT gu.id_grupo 
+                    FROM grupo_utilizador gu 
+                    JOIN utilizador u ON gu.id_utilizador = u.id_utilizador 
+                    JOIN grupo g ON gu.id_grupo = g.id_grupo 
+                    WHERE u.email = ? AND g.nome = ?""";
+
+                String sqlInserirDespesa = "INSERT INTO despesa (descricao, valor, id_utilizador, id_grupo, data) VALUES (?, ?, ?, ?, ?)";
+
+                String sqlInserirParticipacao = "INSERT INTO despesa_utilizador (id_despesa, id_utilizador, valor_participacao) VALUES (?, ?, ?)";
+
+                String sqlObterIdUtilizador = "SELECT id_utilizador FROM utilizador WHERE email = ?";
+
+                try (Connection connection = DriverManager.getConnection(url);
+                     PreparedStatement verificarMembroStmt = connection.prepareStatement(sqlVerificarMembro);
+                     PreparedStatement inserirDespesaStmt = connection.prepareStatement(sqlInserirDespesa, Statement.RETURN_GENERATED_KEYS);
+                     PreparedStatement inserirParticipacaoStmt = connection.prepareStatement(sqlInserirParticipacao);
+                     PreparedStatement obterIdUtilizadorStmt = connection.prepareStatement(sqlObterIdUtilizador)) {
+
+                    verificarMembroStmt.setString(1, usernamePagador);
+                    verificarMembroStmt.setString(2, nomeGrupo);
+                    ResultSet resultSet = verificarMembroStmt.executeQuery();
+
+                    if (!resultSet.next()) {
+                        return false;  // O utilizador pagador não pertence ao grupo
+                    }
+
+                    int grupoId = resultSet.getInt("id_grupo");
+
+                    obterIdUtilizadorStmt.setString(1, usernamePagador);
+                    ResultSet resultSetPagador = obterIdUtilizadorStmt.executeQuery();
+                    if (!resultSetPagador.next()) {
+                        return false;
+                    }
+                    int idPagador = resultSetPagador.getInt("id_utilizador");
+
+                    inserirDespesaStmt.setString(1, descricao);
+                    inserirDespesaStmt.setDouble(2, valor);
+                    inserirDespesaStmt.setInt(3, idPagador);
+                    inserirDespesaStmt.setInt(4, grupoId);
+                    inserirDespesaStmt.setString(5, data);
+                    inserirDespesaStmt.executeUpdate();
+
+
+                    ResultSet generatedKeys = inserirDespesaStmt.getGeneratedKeys();
+                    if (!generatedKeys.next()) {
+                        return false;  // Falha ao obter o ID da despesa
+                    }
+                    int despesaId = generatedKeys.getInt(1);
+
+
+                    for (String participante : participantes) {
+
+                        obterIdUtilizadorStmt.setString(1, participante);
+                        ResultSet resultSetParticipante = obterIdUtilizadorStmt.executeQuery();
+                        if (resultSetParticipante.next()) {
+                            int idParticipante = resultSetParticipante.getInt("id_utilizador");
+
+
+                            double valorParticipacao = valor / participantes.size();
+
+
+                            inserirParticipacaoStmt.setInt(1, despesaId);
+                            inserirParticipacaoStmt.setInt(2, idParticipante);
+                            inserirParticipacaoStmt.setDouble(3, valorParticipacao);
+                            inserirParticipacaoStmt.executeUpdate();
+                        }
+                    }
+
+                    return true;  // Despesa inserida com sucesso
+                } catch (SQLException e) {
+                    System.out.println(e.getMessage());
+                    return false;
+                }
+    }
 
     public static void main(String[] args) throws IOException {
 
@@ -369,7 +612,6 @@ class ClientHandler implements Runnable {
                         _islogged = true;
                         System.out.println("Autenticação bem sucedida para o cliente " + socket.getInetAddress());
 
-                        //LOGICA GERAL DO PROGRAMA AQUI DENTRO
                         while(_islogged){
                             String command = in.readLine();
                             if(command !=null){
@@ -389,12 +631,74 @@ class ClientHandler implements Runnable {
                                     Servidor.imprimeGrupos(username,dbFilePath,out);
                                 }
                                 if (command.startsWith("CONVITES:")){
-                                    String user_to_invite = in.readLine();
+                                    String invites = in.readLine();
+                                    String[] parte = invites.split(":");
+                                    String user_to_invite = parte[1];
+                                    String group_to_invite = parte[2];
                                     System.out.println(user_to_invite);
-                                   // Servidor.enviarConvite(user_to_invite,dbFilePath,out);
-                                }
-                            }
+                                    System.out.println(group_to_invite);
+                                    if(Servidor.enviarConvite(user_to_invite,group_to_invite,dbFilePath)){
+                                        System.out.println("Enviado com sucesso");
+                                    }else{
+                                        System.out.println("Erro ao enviar convite");
+                                    }
 
+                                }if (command.startsWith("VER CONVITES")) {
+                                    List<String> convitesPendentes = Servidor.listarConvitesPendentes(username, dbFilePath);
+
+
+                                    if (convitesPendentes.isEmpty()) {
+                                        out.println("Não tem convites pendentes.");
+                                    } else {
+                                        out.println("Convites pendentes:");
+                                        for (String grupo : convitesPendentes) {
+                                            out.println("Convite para o grupo: " + grupo);
+                                        }
+                                    }
+                                    out.println("END");
+                                    out.println("Deseja aceitar algum convite? (sim/não)");
+                                    String resposta = in.readLine();
+
+                                    if (resposta.equalsIgnoreCase("sim")) {
+                                        out.println("Indique o nome do grupo para aceitar o convite:");
+                                        String grupoEscolhido = in.readLine();
+
+                                        if (Servidor.aceitarConvite(username, grupoEscolhido, dbFilePath)) {
+                                            out.println("Convite para o grupo '" + grupoEscolhido + "' aceite com sucesso.");
+                                        } else {
+                                            out.println("Falha ao aceitar o convite. Verifique o grupo ou se há convite pendente.");
+                                        }
+                                    } else {
+                                        out.println("Nenhum convite foi aceite.");
+                                    }
+                                }if (command.startsWith("EDITAR NOME GRUPO:")) {
+                                    String[] splits = command.split(":");
+                                    String nomeAtualGrupo = splits[1];
+                                    String novoNomeGrupo = splits[2];
+
+                                    if (Servidor.editarNomeGrupo(username, nomeAtualGrupo, novoNomeGrupo, dbFilePath)) {
+                                        out.println("Nome do grupo alterado com sucesso para: " + novoNomeGrupo);
+                                    } else {
+                                        out.println("Erro: Não foi possível alterar o nome do grupo. Verifique se você pertence ao grupo.");
+                                    }
+                                }if (command.startsWith("INSERIR DESPESA:")) {
+                                     String[] partes2 = command.split(":");
+                                    String nomeGrupo = partes2[1];
+                                    String descricao = partes2[2];
+                                    double valor = Double.parseDouble(partes2[3]);
+                                    String data = partes2[4];
+
+                                    String participantesStr = in.readLine();
+                                    List<String> participantes = Arrays.asList(participantesStr.split(","));
+
+                                    if (Servidor.inserirDespesa(username, nomeGrupo, descricao, valor, participantes, data, dbFilePath)) {
+                                        out.println("Despesa inserida com sucesso.");
+                                    } else {
+                                        out.println("Erro ao inserir a despesa. Verifique os dados e tente novamente.");
+                                    }
+                                }
+
+                            }
                         }
                     } else {
                         System.out.println("Autenticação falhou para o cliente " + socket.getInetAddress());
