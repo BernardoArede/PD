@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 
@@ -84,7 +85,7 @@ public class Cliente {
                             System.out.println("13- Exportar para CSV detalhes do grupo");
                             System.out.println("14- Liquidação de dividas");
                             System.out.println("15- Visualização dos saldos do grupo corrente");
-                            System.out.println("17- Logout");
+                            System.out.println("16- Logout");
                             System.out.println();
                             System.out.println("Escolhe uma opção do menu: ");
                             int option = sc.nextInt();
@@ -223,14 +224,41 @@ public class Cliente {
                                 break;
 
                                 case 11:
-                                    /*TODO->Editar uma despesa*/
+
+
+                                     sc.nextLine();
+                                    System.out.println("Indique o nome da despesa que deseja editar:");
+                                    String descricaoAntiga = sc.nextLine();
+
+                                    System.out.println("Insira a nova descrição da despesa:");
+                                    String novaDescricao = sc.nextLine();
+
+                                    System.out.println("Insira o novo valor da despesa:");
+                                    double novoValor = sc.nextDouble();
                                     sc.nextLine();
+
+                                    System.out.println("Insira a nova data da despesa (Formato: YYYY-MM-DD):");
+                                    String novaData = sc.nextLine();
+
+
+                                    out.println("EDITAR DESPESA:" + descricaoAntiga + ":" + novaDescricao + ":" + novoValor + ":" + novaData);
+                                    String respostaEdicaoDespesa = in.readLine();
+                                    System.out.println(respostaEdicaoDespesa);
 
 
                                     break;
 
                                 case 12:
-                                    /*TODO->Eliminar uma despesa*/
+                                    /*TODO->Eliminar uma despesa-> Podemos inserir para listar despesas
+                                       antes apesar de não ser necessario*/
+
+                                     sc.nextLine(); // Limpa o buffer
+                                     System.out.println("Indique o nome da despesa que deseja excluir:");
+                                    String nomeDespesa = sc.nextLine();
+
+                                    out.println("ELIMINAR DESPESA:" + nomeDespesa);
+                                    String respostaEliminacao = in.readLine();
+                                    System.out.println(respostaEliminacao);
                                     break;
 
                                 case 13:
@@ -260,7 +288,7 @@ public class Cliente {
                                     }
                                     break;
                                 case 14:
-                                    /*TODO->Acerto/liquidação de pagamentos*/
+
 
                                      sc.nextLine();
                                     System.out.println("Indique o nome do grupo:");
@@ -268,30 +296,35 @@ public class Cliente {
 
 
                                     out.println("OBTER DIVIDAS:" + nomeGrupoPagamento);
+                                    System.out.println("Suas dívidas:");
                                     String respostaDividas;
                                     while ((respostaDividas = in.readLine()) != null) {
-                                        System.out.println(respostaDividas);
-                                    }
-                                    /*
+                                        if(respostaDividas.equals("FIM") || respostaDividas.equals("NENHUMA DÍVIDA")){
+                                            break;
+                                        }else{
+                                            System.out.println(respostaDividas);
+                                        }
 
-                                    if (respostaDividas.equals("Dívida não encontrada ou já paga.")) {
+                                    }
+
+                                    if (respostaDividas.equals("NENHUMA DÍVIDA")) {
                                         System.out.println("Você não tem dívidas com ninguém neste grupo.");
                                     } else {
-                                        System.out.println("Suas dívidas:");
-                                        System.out.println(respostaDividas);
-
                                         System.out.println("Insira o ID da dívida que deseja pagar:");
+
+                                        // Adicionando validação para o ID da dívida
                                         int idDivida = sc.nextInt();
+                                        sc.nextLine();  // Limpar o buffer do scanner
 
                                         System.out.println("Insira o valor que deseja pagar:");
                                         double valorPagamento = sc.nextDouble();
-                                        sc.nextLine(); // Limpar o buffer
+                                        sc.nextLine();  // Limpar o buffer do scanner
 
                                         // Efetuar o pagamento
                                         out.println("EFETUAR PAGAMENTO:" + idDivida + ":" + valorPagamento);
                                         String respostaPagamento = in.readLine();
                                         System.out.println(respostaPagamento);
-                                    }*/
+                                    }
                                     break;
                                 case 15:
                                     /*TODO->Visualização dos saldos do grupo corrente com, para cada elemento, indicação do:
@@ -299,11 +332,41 @@ public class Cliente {
                                         o valor total que deve;
                                         o valor que que deve a cada um dos restantes elementos;
                                         o valor total que tem a receber;
-                                        o valor que tem a receber de cada um dos restantes elementos;*/
+                                        o valor que tem a receber de cada um dos restantes elementos;
+
+
+                                        NÃO ESTÁ TOTALMENTE CORRETA A IMPLEMENTAÇÃO FEITA-CORRIGIR
+
+                                        */
+
+                                    sc.nextLine();
+
+
+                                    System.out.println("Indique o nome do grupo:");
+                                    String nomeGrupoSaldos = sc.nextLine();
+
+                                    // Solicitar a visualização dos saldos
+                                    out.println("VISUALIZAR SALDOS:" + nomeGrupoSaldos);
+                                    String respostaSaldos = in.readLine();
+
+                                    if (respostaSaldos.equals("NENHUM SALDO ENCONTRADO")) {
+                                        System.out.println("Nenhum saldo encontrado para o grupo " + nomeGrupoSaldos);
+                                    } else {
+                                        // Exibir os saldos recebidos
+                                        System.out.println(respostaSaldos);
+                                        while (in.ready()) {
+                                            System.out.println(in.readLine());
+                                        }
+                                    }
 
                                     break;
                                 case 16:
-                                    /*TODO->LOGOUT*/
+
+                                    System.out.println("Fazendo logout...");
+                                    out.println("LOGOUT:" + email);
+                                    String respostaLogout = in.readLine();
+                                    System.out.println(respostaLogout);
+                                    System.exit(0);
 
                                     break;
 
