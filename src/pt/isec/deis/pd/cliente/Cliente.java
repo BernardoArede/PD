@@ -82,8 +82,9 @@ public class Cliente {
                             System.out.println("11- Editar despesa");
                             System.out.println("12- Eliminar despesa");
                             System.out.println("13- Exportar para CSV detalhes do grupo");
-
-
+                            System.out.println("14- Liquidação de dividas");
+                            System.out.println("15- Visualização dos saldos do grupo corrente");
+                            System.out.println("17- Logout");
                             System.out.println();
                             System.out.println("Escolhe uma opção do menu: ");
                             int option = sc.nextInt();
@@ -195,11 +196,120 @@ public class Cliente {
                                     String respostaDespesa = in.readLine();
                                     System.out.println(respostaDespesa);
                                     break;
+                                case 9:
+                                    //GASTOS TOTAIS DO GRUPO SEM SER DESCRIMINADO
+                                    sc.nextLine();
+                                    System.out.println("Indique o nome do grupo:");
+                                    String nomeGrupoGastos = sc.nextLine();
+                                    out.println("OBTER TOTAL GASTOS:" + nomeGrupoGastos);
+
+                                    String respostaTotalGastos = in.readLine();
+                                    System.out.println(respostaTotalGastos);
+                                    break;
+
+                                case 10:
+                                    //VER HISTORICO DE DESPESAS
+                                    sc.nextLine();
+                                    System.out.println("Indique o nome do grupo:");
+                                    String nomeGrupoHistorico = sc.nextLine();
+                                    out.println("OBTER HISTORICO DESPESAS:" + nomeGrupoHistorico);
+
+                                    String respostaHistorico = in.readLine();
+                                    while (!respostaHistorico.equals("FIM HISTORICO")) {
+                                        System.out.println(respostaHistorico);
+                                        respostaHistorico = in.readLine();
+                                    }
+
+                                break;
+
+                                case 11:
+                                    /*TODO->Editar uma despesa*/
+                                    sc.nextLine();
+
+
+                                    break;
+
+                                case 12:
+                                    /*TODO->Eliminar uma despesa*/
+                                    break;
+
+                                case 13:
+                                    //EXPORTAR DESPESAS FICHEIRO CSV
+                                    sc.nextLine();
+                                    System.out.print("Digite o nome do grupo: ");
+                                    String nomeGrupoCSV = sc.nextLine();
+
+
+                                    System.out.print("Deseja salvar no caminho padrão (src/resources)? (s/n): ");
+                                    String escolhaCaminho = sc.nextLine().trim().toLowerCase();
+
+                                    String caminhoCSV;
+                                    if (escolhaCaminho.equals("s")) {
+                                        caminhoCSV = "src/resources/despesas.csv";
+                                    } else {
+                                        System.out.print("Digite o caminho completo para salvar o ficheiro CSV (ex: C:\\Users\\user\\Desktop\\despesas.csv): ");
+                                        caminhoCSV = sc.nextLine();
+                                    }
+
+                                    out.println("EXPORTAR DESPESAS CSV:" + nomeGrupoCSV + ":" + caminhoCSV);
+
+
+                                    String respostaExportacao;
+                                    while (!(respostaExportacao = in.readLine()).equals("FIM EXPORTACAO")) {
+                                        System.out.println(respostaExportacao);
+                                    }
+                                    break;
+                                case 14:
+                                    /*TODO->Acerto/liquidação de pagamentos*/
+
+                                     sc.nextLine();
+                                    System.out.println("Indique o nome do grupo:");
+                                    String nomeGrupoPagamento = sc.nextLine();
+
+
+                                    out.println("OBTER DIVIDAS:" + nomeGrupoPagamento);
+                                    String respostaDividas;
+                                    while ((respostaDividas = in.readLine()) != null) {
+                                        System.out.println(respostaDividas);
+                                    }
+                                    /*
+
+                                    if (respostaDividas.equals("Dívida não encontrada ou já paga.")) {
+                                        System.out.println("Você não tem dívidas com ninguém neste grupo.");
+                                    } else {
+                                        System.out.println("Suas dívidas:");
+                                        System.out.println(respostaDividas);
+
+                                        System.out.println("Insira o ID da dívida que deseja pagar:");
+                                        int idDivida = sc.nextInt();
+
+                                        System.out.println("Insira o valor que deseja pagar:");
+                                        double valorPagamento = sc.nextDouble();
+                                        sc.nextLine(); // Limpar o buffer
+
+                                        // Efetuar o pagamento
+                                        out.println("EFETUAR PAGAMENTO:" + idDivida + ":" + valorPagamento);
+                                        String respostaPagamento = in.readLine();
+                                        System.out.println(respostaPagamento);
+                                    }*/
+                                    break;
+                                case 15:
+                                    /*TODO->Visualização dos saldos do grupo corrente com, para cada elemento, indicação do:
+                                        o gasto total;
+                                        o valor total que deve;
+                                        o valor que que deve a cada um dos restantes elementos;
+                                        o valor total que tem a receber;
+                                        o valor que tem a receber de cada um dos restantes elementos;*/
+
+                                    break;
+                                case 16:
+                                    /*TODO->LOGOUT*/
+
+                                    break;
 
                                 default:
                                         System.out.println("ERRO DE ESCOLHA DE OPÇÃO");
                             }
-
                         }
                     }else{
                         System.out.println("Credencias incorretas");

@@ -49,17 +49,24 @@ public class ManageDB {
                     FOREIGN KEY (id_grupo) REFERENCES grupo(id_grupo) ON DELETE CASCADE,
                     FOREIGN KEY (id_utilizador) REFERENCES utilizador(id_utilizador) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS despesa_utilizador (
+                    id_despesa INTEGER,
+                    id_utilizador INTEGER,
+                    valor_participacao REAL NOT NULL,
+                    PRIMARY KEY (id_despesa, id_utilizador),
+                    FOREIGN KEY (id_despesa) REFERENCES despesa(id_despesa) ON DELETE CASCADE,
+                    FOREIGN KEY (id_utilizador) REFERENCES utilizador(id_utilizador) ON DELETE CASCADE
+                );
 
                 CREATE TABLE IF NOT EXISTS despesa (
                     id_despesa INTEGER PRIMARY KEY AUTOINCREMENT,
                     descricao TEXT NOT NULL,
                     valor REAL NOT NULL,
-                    id_utilizador INTEGER,
+                    data TEXT NOT NULL,  -- Formato: YYYY-MM-DD
                     id_grupo INTEGER,
-                    data DATE NOT NULL,
-                    versao INTEGER DEFAULT 1,
-                    FOREIGN KEY (id_utilizador) REFERENCES utilizador(id_utilizador) ON DELETE CASCADE,
-                    FOREIGN KEY (id_grupo) REFERENCES grupo(id_grupo) ON DELETE CASCADE
+                    id_utilizador INTEGER,
+                    FOREIGN KEY (id_grupo) REFERENCES grupo (id_grupo),
+                    FOREIGN KEY (id_utilizador) REFERENCES utilizador (id_utilizador)
                 );
 
                 CREATE TABLE IF NOT EXISTS pagamento (
@@ -74,14 +81,7 @@ public class ManageDB {
                     FOREIGN KEY (id_despesa) REFERENCES despesa(id_despesa) ON DELETE SET NULL
                 );
 
-                CREATE TABLE IF NOT EXISTS despesa_utilizador (
-                    id_despesa INTEGER,
-                    id_utilizador INTEGER,
-                    valor_participacao REAL NOT NULL,
-                    PRIMARY KEY (id_despesa, id_utilizador),
-                    FOREIGN KEY (id_despesa) REFERENCES despesa(id_despesa) ON DELETE CASCADE,
-                    FOREIGN KEY (id_utilizador) REFERENCES utilizador(id_utilizador) ON DELETE CASCADE
-                );
+                
                 """;
 
 
