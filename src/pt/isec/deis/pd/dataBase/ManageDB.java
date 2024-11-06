@@ -6,15 +6,10 @@ import java.sql.Statement;
 
 public class ManageDB {
 
-    public void criarBaseDados(String url){
-
-    }
-
     public static void main(String[] args) {
 
         String url = "jdbc:sqlite:src/resources/identifier.sqlite";
 
-        // Código SQL para criar as tabelas
         String sql = """
                 
                 CREATE TABLE IF NOT EXISTS db_version(
@@ -87,7 +82,6 @@ public class ManageDB {
 
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
-            // Executar o SQL
             stmt.executeUpdate(sql);
             System.out.println("Base de dados e tabelas criadas com sucesso.");
         } catch (Exception e) {

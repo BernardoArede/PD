@@ -160,8 +160,7 @@ public class Cliente {
                                     sc.nextLine();
                                     System.out.println("Indique o nome do grupo que deseja eliminar:");
                                     String nomeGrupo = sc.nextLine();
-                                    out.println("ELIMINAR GRUPO:" + nomeGrupo);
-                                    String resposta = in.readLine();
+                                    out.println("ELIMINAR GRUPO:" + nomeGrupo);String resposta = in.readLine();
                                     System.out.println(resposta);
                                     break;
 
@@ -224,8 +223,6 @@ public class Cliente {
                                 break;
 
                                 case 11:
-
-
                                      sc.nextLine();
                                     System.out.println("Indique o nome da despesa que deseja editar:");
                                     String descricaoAntiga = sc.nextLine();
