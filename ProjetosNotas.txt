@@ -1,14 +1,2 @@
 Projeto-PD
 
-
----Servidor Principal---
-
---O numero da versão da DB tem que estar numa tabela, e ser incrementado conforme a DB sofre alterações
-
---Se o servidor principal não tiver base de dados cria uma com versão 0
-
-
-
-
-
-

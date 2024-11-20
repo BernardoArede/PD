@@ -19,7 +19,7 @@ public class Cliente {
         int opt;
         int port;
         Scanner sc = new Scanner(System.in);
-        boolean login = false;
+        boolean login;
 
         if(args.length != 2) {
             System.out.println("Sintaxa: [Endereço] [Porta]");
@@ -219,7 +219,6 @@ public class Cliente {
                                         System.out.println(respostaHistorico);
                                         respostaHistorico = in.readLine();
                                     }
-
                                 break;
 
                                 case 11:
@@ -249,7 +248,7 @@ public class Cliente {
                                     /*TODO->Eliminar uma despesa-> Podemos inserir para listar despesas
                                        antes apesar de não ser necessario*/
 
-                                     sc.nextLine(); // Limpa o buffer
+                                     sc.nextLine();
                                      System.out.println("Indique o nome da despesa que deseja excluir:");
                                     String nomeDespesa = sc.nextLine();
 
@@ -286,8 +285,7 @@ public class Cliente {
                                     break;
                                 case 14:
 
-
-                                     sc.nextLine();
+                                    sc.nextLine();
                                     System.out.println("Indique o nome do grupo:");
                                     String nomeGrupoPagamento = sc.nextLine();
 
@@ -309,7 +307,7 @@ public class Cliente {
                                     } else {
                                         System.out.println("Insira o ID da dívida que deseja pagar:");
 
-                                        // Adicionando validação para o ID da dívida
+
                                         int idDivida = sc.nextInt();
                                         sc.nextLine();  // Limpar o buffer do scanner
 
@@ -342,7 +340,7 @@ public class Cliente {
                                     System.out.println("Indique o nome do grupo:");
                                     String nomeGrupoSaldos = sc.nextLine();
 
-                                    // Solicitar a visualização dos saldos
+
                                     out.println("VISUALIZAR SALDOS:" + nomeGrupoSaldos);
                                     String respostaSaldos = in.readLine();
 
@@ -363,7 +361,8 @@ public class Cliente {
                                     out.println("LOGOUT:" + email);
                                     String respostaLogout = in.readLine();
                                     System.out.println(respostaLogout);
-                                    System.exit(0);
+                                    login = false;
+                                    //System.exit(0);
 
                                     break;
 

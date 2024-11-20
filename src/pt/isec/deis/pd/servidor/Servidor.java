@@ -1,20 +1,21 @@
 package pt.isec.deis.pd.servidor;
 
+import pt.isec.deis.pd.dataBase.ManageDB;
+
 import java.net.*;
 import java.io.*;
 import java.sql.*;
-import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.Date;
+
 
 public class Servidor  {
 
     private static final int HEARTBEAT_INTERVAL = 10000; // Intervalo
-    private static final int HEARTBEAT_PORT = 4444; //Porta de multicast
-    private static final String HEARTBEAT_ADDRESS = "230.44.44.44"; //Address de multicast
+    static final int HEARTBEAT_PORT = 4444; //Porta de multicast
+    static final String HEARTBEAT_ADDRESS = "230.44.44.44"; //Address de multicast
     private static final int TIMEOUT = 5000000;
 
-    static double getVersion(String dbPath) {
+    public static double getVersion(String dbPath) {
     String url = "jdbc:sqlite:" + dbPath;
     String sql = "SELECT db_version FROM db_version";
 
@@ -32,7 +33,7 @@ public class Servidor  {
     return 0;
 }
 
-    static void upVersionDB(String dbPath) {
+    public static void upVersionDB(String dbPath) {
                     String url = "jdbc:sqlite:" + dbPath;
                     String selectSql = "SELECT db_version FROM db_version";
                     String updateSql = "UPDATE db_version SET db_version = ?";
@@ -57,7 +58,7 @@ public class Servidor  {
                     }
                 }
 
-    static boolean loginUtilizador(String email, String password, String dbPath) {
+    public static boolean loginUtilizador(String email, String password, String dbPath) {
 
                         String url = "jdbc:sqlite:" + dbPath;
 
@@ -84,7 +85,7 @@ public class Servidor  {
 
                     }
 
-    static boolean registoUtilizador(String email, String password, String telefone, String dbPath) {
+    public static boolean registoUtilizador(String email, String password, String telefone, String dbPath) {
 
                         String url = "jdbc:sqlite:" + dbPath;
 
@@ -100,8 +101,8 @@ public class Servidor  {
 
 
                                 int rowsInserted = pstmt.executeUpdate();
+                                upVersionDB(dbPath);
                                 return rowsInserted > 0;
-
                             }
                         } catch (SQLException e) {
                             System.out.println("Erro ao inserir utilizador na base de dados: " + e.getMessage());
@@ -113,7 +114,7 @@ public class Servidor  {
 
     private static void startHeartBeat(int listeningPort, String dbPath){
 
-                     Timer timer = new Timer(true); // "true" para rodar como daemon
+                     Timer timer = new Timer(true);
 
                         TimerTask heartbeatTask = new TimerTask() {
                             @Override
@@ -122,7 +123,7 @@ public class Servidor  {
                                         double version = getVersion(dbPath);
                                         String message = String.format("Versão da base de dados: %.1f, Porto de escuta para backup: %d", version, listeningPort);
 
-                                    // Envia a mensagem de heartbeat
+
                                     sendHeartbeat(message);
                                 } catch (IOException e) {
                                     System.out.println("Erro ao enviar heartbeat: " + e.getMessage());
@@ -142,7 +143,7 @@ public class Servidor  {
                             multicastSocket.send(packet);
                             System.out.println("Heartbeat enviado: " + message);
                         }
-                    }
+    }
 
     public static boolean grupoExiste(String groupName, String dbFilePath) {
                     String url = "jdbc:sqlite:" + dbFilePath;
@@ -205,7 +206,8 @@ public class Servidor  {
                             addMemberStmt.setInt(2, userId);
                             addMemberStmt.executeUpdate();
 
-                            connection.commit();  // Confirma a transação
+                            connection.commit();
+                            upVersionDB(dbFilePath);
                             return true;
                         } catch (SQLException e) {
                             connection.rollback();  // Desfaz a transação em caso de erro
@@ -216,7 +218,7 @@ public class Servidor  {
                     }
 
                     return false;
-                }
+    }
 
     public static void imprimeGrupos(String username, String dbFilePath, PrintWriter out) {
                     String url = "jdbc:sqlite:" + dbFilePath;
@@ -418,7 +420,8 @@ public class Servidor  {
                             atualizarNomeGrupoStmt.setInt(2, grupoId);
                             atualizarNomeGrupoStmt.executeUpdate();
 
-                            return true;  // Nome do grupo alterado com sucesso
+                            upVersionDB(dbFilePath);
+                            return true;
                         } catch (SQLException e) {
                             e.printStackTrace();
                             return false;
@@ -501,7 +504,7 @@ public class Servidor  {
                                     System.out.println("Erro: Participante " + participante + " não encontrado.");
                                 }
                         }
-
+                            upVersionDB(dbFilePath);
                             return true;
                         } catch (SQLException e) {
                             System.out.println("Erro SQL: " + e.getMessage());
@@ -551,6 +554,7 @@ public class Servidor  {
             }
             eliminaStmt.setString(1, nomeGrupo);
             eliminaStmt.executeUpdate();
+            upVersionDB(dbFilePath);
             return true;
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -782,7 +786,7 @@ public class Servidor  {
                           pstmtRemover.setString(2, username);
                           pstmtRemover.executeUpdate();
                       }
-
+                      upVersionDB(dbFilePath);
                       return "Pagamento efetuado com sucesso.";
                   } else {
                       return "Dívida não encontrada ou já paga.";
@@ -796,106 +800,7 @@ public class Servidor  {
 
       }
 
-   /*public static Map<String, Object> visualizarSaldos(String nomeGrupo, String dbFilePath) {
-    Map<String, Object> saldos = new HashMap<>();
-
-    try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
-        // Obter id do grupo
-        String sqlGrupo = "SELECT id_grupo FROM grupo WHERE nome = ?";
-        PreparedStatement stmtGrupo = conn.prepareStatement(sqlGrupo);
-        stmtGrupo.setString(1, nomeGrupo);
-        ResultSet rsGrupo = stmtGrupo.executeQuery();
-
-        if (rsGrupo.next()) {
-            int idGrupo = rsGrupo.getInt("id_grupo");
-
-            // Obter utilizadores do grupo
-            String sqlUtilizadores = "SELECT u.id_utilizador, u.email " +
-                    "FROM utilizador u " +
-                    "JOIN grupo_utilizador gu ON u.id_utilizador = gu.id_utilizador " +
-                    "WHERE gu.id_grupo = ?";
-            PreparedStatement stmtUtilizadores = conn.prepareStatement(sqlUtilizadores);
-            stmtUtilizadores.setInt(1, idGrupo);
-            ResultSet rsUtilizadores = stmtUtilizadores.executeQuery();
-
-            while (rsUtilizadores.next()) {
-                int idUtilizador = rsUtilizadores.getInt("id_utilizador");
-                String emailUtilizador = rsUtilizadores.getString("email");
-
-                // Inicializar valores
-                double gastoTotal = 0;
-                double totalDeve = 0;
-                double totalReceber = 0;
-                Map<String, Double> dividasPorUtilizador = new HashMap<>();
-                Map<String, Double> recebimentosPorUtilizador = new HashMap<>();
-
-                // Obter despesas criadas pelo utilizador
-                String sqlGastos = "SELECT SUM(d.valor) as gasto_total " +
-                                   "FROM despesa d " +
-                                   "WHERE d.id_utilizador = ? AND d.id_grupo = ?";
-                PreparedStatement stmtGastos = conn.prepareStatement(sqlGastos);
-                stmtGastos.setInt(1, idUtilizador);
-                stmtGastos.setInt(2, idGrupo);
-                ResultSet rsGastos = stmtGastos.executeQuery();
-                if (rsGastos.next()) {
-                    gastoTotal = rsGastos.getDouble("gasto_total");
-                }
-
-                // Obter total que deve
-                String sqlDividas = "SELECT u.email, du.valor_participacao " +
-                                    "FROM despesa_utilizador du " +
-                                    "JOIN despesa d ON du.id_despesa = d.id_despesa " +
-                                    "JOIN utilizador u ON du.id_utilizador = u.id_utilizador " +
-                                    "WHERE d.id_grupo = ? AND du.id_utilizador = ?";
-                PreparedStatement stmtDividas = conn.prepareStatement(sqlDividas);
-                stmtDividas.setInt(1, idGrupo);
-                stmtDividas.setInt(2, idUtilizador);
-                ResultSet rsDividas = stmtDividas.executeQuery();
-                while (rsDividas.next()) {
-                    String emailCredor = rsDividas.getString("email");
-                    double valorDivida = rsDividas.getDouble("valor_participacao");
-                    totalDeve += valorDivida;
-                    dividasPorUtilizador.put(emailCredor, valorDivida);
-                }
-
-                // Obter total a receber
-                String sqlRecebimentos = "SELECT u.email, du.valor_participacao " +
-                                         "FROM despesa_utilizador du " +
-                                         "JOIN despesa d ON du.id_despesa = d.id_despesa " +
-                                         "JOIN utilizador u ON d.id_utilizador = u.id_utilizador " +
-                                         "WHERE d.id_grupo = ? AND d.id_utilizador = ?";
-                PreparedStatement stmtRecebimentos = conn.prepareStatement(sqlRecebimentos);
-                stmtRecebimentos.setInt(1, idGrupo);
-                stmtRecebimentos.setInt(2, idUtilizador);
-                ResultSet rsRecebimentos = stmtRecebimentos.executeQuery();
-                while (rsRecebimentos.next()) {
-                    String emailDevedor = rsRecebimentos.getString("email");
-                    double valorRecebimento = rsRecebimentos.getDouble("valor_participacao");
-                    totalReceber += valorRecebimento;
-                    recebimentosPorUtilizador.put(emailDevedor, valorRecebimento);
-                }
-
-                // Adicionar informações ao mapa de saldos
-                Map<String, Object> detalhes = new HashMap<>();
-                detalhes.put("gasto_total", gastoTotal);
-                detalhes.put("total_deve", totalDeve);
-                detalhes.put("total_receber", totalReceber);
-                detalhes.put("dividas_por_utilizador", dividasPorUtilizador);
-                detalhes.put("recebimentos_por_utilizador", recebimentosPorUtilizador);
-
-                saldos.put(emailUtilizador, detalhes);
-            }
-        }
-
-    } catch (SQLException e) {
-        e.printStackTrace();
-    }
-
-    return saldos;
-}*/
-
-
-public static Map<String, Object> visualizarSaldos(String nomeGrupo, String dbFilePath) {
+    public static Map<String, Object> visualizarSaldos(String nomeGrupo, String dbFilePath) {
     Map<String, Object> saldos = new HashMap<>();
 
     try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
@@ -996,7 +901,7 @@ public static Map<String, Object> visualizarSaldos(String nomeGrupo, String dbFi
     return saldos;
 }
 
-public static String eliminarDespesa(String descricao, String dbFilePath) {
+    public static String eliminarDespesa(String descricao, String dbFilePath) {
     try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
         // Primeiro, vamos obter o ID da despesa com a descrição fornecida
         String sqlGetId = "SELECT id_despesa FROM despesa WHERE descricao = ?";
@@ -1020,7 +925,7 @@ public static String eliminarDespesa(String descricao, String dbFilePath) {
                     pstmtDeleteDespesa.setInt(1, idDespesa);
                     pstmtDeleteDespesa.executeUpdate();
                 }
-
+                upVersionDB(dbFilePath);
                 return "Despesa '" + descricao + "' excluída com sucesso.";
             } else {
                 return "Despesa não encontrada.";
@@ -1030,7 +935,8 @@ public static String eliminarDespesa(String descricao, String dbFilePath) {
         return "Erro ao excluir despesa: " + e.getMessage();
     }
 }
-public static String editarDespesa(String descricaoAntiga, String novaDescricao, double novoValor, String novaData, String dbFilePath) {
+
+    public static String editarDespesa(String descricaoAntiga, String novaDescricao, double novoValor, String novaData, String dbFilePath) {
     try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
         // Primeiro, vamos obter o ID da despesa com a descrição fornecida
         String sqlGetId = "SELECT id_despesa FROM despesa WHERE descricao = ?";
@@ -1050,7 +956,7 @@ public static String editarDespesa(String descricaoAntiga, String novaDescricao,
                     pstmtUpdate.setInt(4, idDespesa);
                     pstmtUpdate.executeUpdate();
                 }
-
+                upVersionDB(dbFilePath);
                 return "Despesa '" + descricaoAntiga + "' editada com sucesso.";
             } else {
                 return "Despesa não encontrada.";
@@ -1062,12 +968,12 @@ public static String editarDespesa(String descricaoAntiga, String novaDescricao,
 }
 
 
-
     public static void main(String[] args) throws IOException {
 
         int listeningPort;
         String dbFilePath;
         File dbFile;
+        ManageDB db = new ManageDB();
 
         if (args.length != 2) {
             System.out.println("Sintaxe: java Servidor [port] [fileDataBaseName]");
@@ -1077,11 +983,12 @@ public static String editarDespesa(String descricaoAntiga, String novaDescricao,
         dbFilePath = args[1].trim();
         dbFile = new File(dbFilePath);
 
+        db.initializeDatabase();
+
         if (!dbFile.exists()) {
-            System.out.println("A diretoria " + dbFile + " não existe!");
+            System.out.println("A base de dados " + dbFile + " não foi criada corretamente.");
             return;
-        }
-        if (!dbFile.canRead()) {
+        } else if (!dbFile.canRead()) {
             System.out.println("Sem permissões de leitura na diretoria " + dbFile + "!");
             return;
         }
@@ -1093,7 +1000,6 @@ public static String editarDespesa(String descricaoAntiga, String novaDescricao,
                try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
                 System.out.println("Conectado à base de dados SQLite com sucesso.");
 
-                /*TODO->Servidor de backup e não para a consola do servidor principal*/
                 startHeartBeat(listeningPort, dbFilePath);
 
             try (ServerSocket serverSocket = new ServerSocket(listeningPort)) {

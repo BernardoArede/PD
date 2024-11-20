@@ -1,5 +1,4 @@
 package pt.isec.deis.pd.servidor;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -13,9 +12,9 @@ import java.util.Map;
 
 public class ClientHandler implements Runnable {
 
-    private Socket socket;
-    private Connection connection;
-    private String dbFilePath;
+    private final Socket socket;
+    private final Connection connection;
+    private final String dbFilePath;
     private boolean _islogged = false;
 
     public ClientHandler(Socket socket, Connection connection, String dbFilePath) {
@@ -49,7 +48,7 @@ public class ClientHandler implements Runnable {
 
                         while(_islogged){
                             String command = in.readLine();
-                            if(command !=null) {
+                            if(command != null) {
                                 if (command.startsWith("GRUPO:")) {
                                     String groupName = command.split(":")[1].trim();
                                     if (Servidor.grupoExiste(groupName, dbFilePath)) {
@@ -81,8 +80,6 @@ public class ClientHandler implements Runnable {
                                 }
                                 if (command.startsWith("VER CONVITES")) {
                                     List<String> convitesPendentes = Servidor.listarConvitesPendentes(username, dbFilePath);
-
-
                                     if (convitesPendentes.isEmpty()) {
                                         out.println("Não tem convites pendentes.");
                                     } else {
@@ -235,7 +232,7 @@ public class ClientHandler implements Runnable {
                                                     .append(", Total a Receber: ").append(detalhes.get("total_receber"))
                                                     .append(", Dividas por Utilizador: ").append(detalhes.get("dividas_por_utilizador"))
                                                     .append(", Recebimentos por Utilizador: ").append(detalhes.get("recebimentos_por_utilizador"));
-                                            out.println(resposta.toString());
+                                            out.println(resposta);
                                         }
                                     }
                                 }if(command.startsWith("LOGOUT")){

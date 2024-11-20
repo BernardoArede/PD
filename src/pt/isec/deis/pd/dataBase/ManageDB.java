@@ -1,20 +1,31 @@
 package pt.isec.deis.pd.dataBase;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 
 public class ManageDB {
 
-    public static void main(String[] args) {
+    public void initializeDatabase() {
+        File dbFile = new File("src/resources/identifier.sqlite");
+        if (!dbFile.exists()) {
+            System.out.println("Base de dados não existe. Criando...");
+            createDB();
+            System.out.println("Base de dados e tabelas criadas com sucesso.");
+        } else {
+            System.out.println("Base de dados já existe.");
+        }
+    }
 
-        String url = "jdbc:sqlite:src/resources/identifier.sqlite";
+    public  void createDB() {
 
-        String sql = """
+     String url = "jdbc:sqlite:src/resources/identifier.sqlite";
+     String sql = """
                 
                 CREATE TABLE IF NOT EXISTS db_version(
-                db_version REAL PRIMARY KEY 
-);
+                db_version REAL PRIMARY KEY DEFAULT 0
+        );
                 CREATE TABLE IF NOT EXISTS convite (
                     id_convite INTEGER PRIMARY KEY AUTOINCREMENT,
                     id_grupo INTEGER,
@@ -75,17 +86,26 @@ public class ManageDB {
                     FOREIGN KEY (id_utilizador_recebedor) REFERENCES utilizador(id_utilizador) ON DELETE CASCADE,
                     FOREIGN KEY (id_despesa) REFERENCES despesa(id_despesa) ON DELETE SET NULL
                 );
-
-                
                 """;
-
 
         try (Connection conn = DriverManager.getConnection(url);
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(sql);
-            System.out.println("Base de dados e tabelas criadas com sucesso.");
+
+             String insertVersion = """
+                    INSERT INTO db_version (db_version)
+                    SELECT 0
+                    WHERE NOT EXISTS (SELECT 1 FROM db_version);
+                    """;
+            stmt.executeUpdate(insertVersion);
         } catch (Exception e) {
             System.out.println("Erro ao criar a base de dados: " + e.getMessage());
         }
     }
+
+
+
+
 }
+
+
