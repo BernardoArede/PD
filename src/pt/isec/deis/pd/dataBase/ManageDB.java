@@ -8,7 +8,7 @@ import java.sql.Statement;
 public class ManageDB {
 
     public void initializeDatabase() {
-        File dbFile = new File("src/resources/identifier.sqlite");
+        File dbFile = new File("src/pt/isec/deis/pd/resources/identifier.sqlite");
         if (!dbFile.exists()) {
             System.out.println("Base de dados não existe. Criando...");
             createDB();
@@ -20,7 +20,7 @@ public class ManageDB {
 
     public  void createDB() {
 
-     String url = "jdbc:sqlite:src/resources/identifier.sqlite";
+     String url = "jdbc:sqlite:src/pt/isec/deis/pd/resources/identifier.sqlite";
      String sql = """
                 
                 CREATE TABLE IF NOT EXISTS db_version(

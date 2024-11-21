@@ -122,7 +122,7 @@ public class Servidor  {
                                 try {
                                         double version = getVersion(dbPath);
                                         String message = String.format("Versão da base de dados: %.1f, Porto de escuta para backup: %d", version, listeningPort);
-                                    sendHeartbeat(message);
+                                        sendHeartbeat(message);
                                 } catch (IOException e) {
                                     System.out.println("Erro ao enviar heartbeat: " + e.getMessage());
                                 }

@@ -18,8 +18,8 @@ import static pt.isec.deis.pd.servidor.Servidor.HEARTBEAT_PORT;
 public class ServidorBackup {
 
     private static final int TIMEOUT_SECONDS = 30;
-    private static final String BACKUP_DIR = "src/DB_Backup";
-     private static final String DB_DIR = "src/resources/identifier.sqlite";
+    private static final String BACKUP_DIR = "src/pt/isec/deis/pd/Backup/DB_Backup";
+     private static final String DB_DIR = "src/pt/isec/deis/pd/resources/identifier.sqlite";
 
     public static void main(String[] args)  {
 
@@ -31,7 +31,7 @@ public class ServidorBackup {
         dbFilePath = args[1].trim();
         File dbFile = new File(dbFilePath);
 
-        if(!dbFile.isDirectory() || Objects.requireNonNull(dbFile.list()).length != 0 ) {
+        if(!dbFile.isDirectory() || dbFile.list().length != 0 ) {
             System.out.println("A diretoria não está vazia.");
             System.out.println("A terminar backup...");
             exit(-1);
