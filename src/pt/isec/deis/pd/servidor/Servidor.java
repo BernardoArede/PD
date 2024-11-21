@@ -11,8 +11,8 @@ import java.util.*;
 public class Servidor  {
 
     private static final int HEARTBEAT_INTERVAL = 10000; // Intervalo
-    static final int HEARTBEAT_PORT = 4444; //Porta de multicast
-    static final String HEARTBEAT_ADDRESS = "230.44.44.44"; //Address de multicast
+    public static final int HEARTBEAT_PORT = 4444; //Porta de multicast
+    public static final String HEARTBEAT_ADDRESS = "230.44.44.44"; //Address de multicast
     private static final int TIMEOUT = 5000000;
 
     public static double getVersion(String dbPath) {
@@ -101,7 +101,7 @@ public class Servidor  {
 
 
                                 int rowsInserted = pstmt.executeUpdate();
-                                upVersionDB(dbPath);
+
                                 return rowsInserted > 0;
                             }
                         } catch (SQLException e) {
@@ -112,7 +112,7 @@ public class Servidor  {
 
                     }
 
-    private static void startHeartBeat(int listeningPort, String dbPath){
+    public static void startHeartBeat(int listeningPort, String dbPath){
 
                      Timer timer = new Timer(true);
 
@@ -122,8 +122,6 @@ public class Servidor  {
                                 try {
                                         double version = getVersion(dbPath);
                                         String message = String.format("Versão da base de dados: %.1f, Porto de escuta para backup: %d", version, listeningPort);
-
-
                                     sendHeartbeat(message);
                                 } catch (IOException e) {
                                     System.out.println("Erro ao enviar heartbeat: " + e.getMessage());
@@ -207,7 +205,7 @@ public class Servidor  {
                             addMemberStmt.executeUpdate();
 
                             connection.commit();
-                            upVersionDB(dbFilePath);
+
                             return true;
                         } catch (SQLException e) {
                             connection.rollback();  // Desfaz a transação em caso de erro
@@ -420,7 +418,7 @@ public class Servidor  {
                             atualizarNomeGrupoStmt.setInt(2, grupoId);
                             atualizarNomeGrupoStmt.executeUpdate();
 
-                            upVersionDB(dbFilePath);
+
                             return true;
                         } catch (SQLException e) {
                             e.printStackTrace();
@@ -504,7 +502,7 @@ public class Servidor  {
                                     System.out.println("Erro: Participante " + participante + " não encontrado.");
                                 }
                         }
-                            upVersionDB(dbFilePath);
+
                             return true;
                         } catch (SQLException e) {
                             System.out.println("Erro SQL: " + e.getMessage());
@@ -554,7 +552,7 @@ public class Servidor  {
             }
             eliminaStmt.setString(1, nomeGrupo);
             eliminaStmt.executeUpdate();
-            upVersionDB(dbFilePath);
+
             return true;
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -786,7 +784,7 @@ public class Servidor  {
                           pstmtRemover.setString(2, username);
                           pstmtRemover.executeUpdate();
                       }
-                      upVersionDB(dbFilePath);
+
                       return "Pagamento efetuado com sucesso.";
                   } else {
                       return "Dívida não encontrada ou já paga.";
@@ -901,7 +899,7 @@ public class Servidor  {
     return saldos;
 }
 
-    public static String eliminarDespesa(String descricao, String dbFilePath) {
+    public static boolean eliminarDespesa(String descricao, String dbFilePath) {
     try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
         // Primeiro, vamos obter o ID da despesa com a descrição fornecida
         String sqlGetId = "SELECT id_despesa FROM despesa WHERE descricao = ?";
@@ -925,18 +923,19 @@ public class Servidor  {
                     pstmtDeleteDespesa.setInt(1, idDespesa);
                     pstmtDeleteDespesa.executeUpdate();
                 }
-                upVersionDB(dbFilePath);
-                return "Despesa '" + descricao + "' excluída com sucesso.";
+
+                return true;
+
             } else {
-                return "Despesa não encontrada.";
+               return false;
             }
         }
     } catch (SQLException e) {
-        return "Erro ao excluir despesa: " + e.getMessage();
+        return false;
     }
 }
 
-    public static String editarDespesa(String descricaoAntiga, String novaDescricao, double novoValor, String novaData, String dbFilePath) {
+    public static boolean editarDespesa(String descricaoAntiga, String novaDescricao, double novoValor, String novaData, String dbFilePath) {
     try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
         // Primeiro, vamos obter o ID da despesa com a descrição fornecida
         String sqlGetId = "SELECT id_despesa FROM despesa WHERE descricao = ?";
@@ -956,14 +955,14 @@ public class Servidor  {
                     pstmtUpdate.setInt(4, idDespesa);
                     pstmtUpdate.executeUpdate();
                 }
-                upVersionDB(dbFilePath);
-                return "Despesa '" + descricaoAntiga + "' editada com sucesso.";
+
+                return true;
             } else {
-                return "Despesa não encontrada.";
+                return false;
             }
         }
     } catch (SQLException e) {
-        return "Erro ao editar despesa: " + e.getMessage();
+        return false;
     }
 }
 
@@ -1014,7 +1013,7 @@ public class Servidor  {
 
                         System.out.println("Cliente conectado: " + socket.getInetAddress());
 
-                        ClientHandler clientHandler = new ClientHandler(socket, connection, dbFilePath);
+                        ClientHandler clientHandler = new ClientHandler(listeningPort,socket, connection, dbFilePath);
                         Thread clientThread = new Thread(clientHandler);
                         clientThread.start();
 

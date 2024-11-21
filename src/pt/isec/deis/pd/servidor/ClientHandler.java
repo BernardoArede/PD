@@ -16,11 +16,13 @@ public class ClientHandler implements Runnable {
     private final Connection connection;
     private final String dbFilePath;
     private boolean _islogged = false;
+    private int listeningPort;
 
-    public ClientHandler(Socket socket, Connection connection, String dbFilePath) {
+    public ClientHandler(int listeningPort,Socket socket, Connection connection, String dbFilePath) {
         this.socket = socket;
         this.connection = connection;
         this.dbFilePath = dbFilePath;
+        this.listeningPort = listeningPort;
     }
 
     @Override
@@ -56,6 +58,8 @@ public class ClientHandler implements Runnable {
                                     } else {
                                         if (Servidor.criarGrupo(groupName, username, dbFilePath)) {
                                             out.println("GROUP_CREATED");
+                                            Servidor.upVersionDB(dbFilePath);
+                                            Servidor.startHeartBeat(listeningPort,dbFilePath);
                                         } else {
                                             out.println("FAIL_CREATE_GROUP");
                                         }
@@ -112,6 +116,7 @@ public class ClientHandler implements Runnable {
 
                                     if (Servidor.editarNomeGrupo(username, nomeAtualGrupo, novoNomeGrupo, dbFilePath)) {
                                         out.println("Nome do grupo alterado com sucesso para: " + novoNomeGrupo);
+                                        Servidor.upVersionDB(dbFilePath);
                                     } else {
                                         out.println("Erro: Não foi possível alterar o nome do grupo. Verifique se você pertence ao grupo.");
                                     }
@@ -128,6 +133,7 @@ public class ClientHandler implements Runnable {
 
                                     if (Servidor.inserirDespesa(username, nomeGrupo, descricao, valor, participantes, data, dbFilePath)) {
                                         out.println("Despesa inserida com sucesso.");
+                                        Servidor.upVersionDB(dbFilePath);
                                     } else {
                                         out.println("Erro ao inserir a despesa. Verifique os dados e tente novamente.");
                                     }
@@ -138,6 +144,7 @@ public class ClientHandler implements Runnable {
                                         String nomeGrupo = partes3[1];
                                         if (Servidor.eliminarGrupoPorNome(nomeGrupo, dbFilePath)) {
                                             out.println("Grupo '" + nomeGrupo + "' eliminado com sucesso.");
+                                            Servidor.upVersionDB(dbFilePath);
                                         } else {
                                             out.println("Não foi possível eliminar o grupo. Existem despesas associadas ou o grupo não existe.");
                                         }
@@ -233,6 +240,7 @@ public class ClientHandler implements Runnable {
                                                     .append(", Dividas por Utilizador: ").append(detalhes.get("dividas_por_utilizador"))
                                                     .append(", Recebimentos por Utilizador: ").append(detalhes.get("recebimentos_por_utilizador"));
                                             out.println(resposta);
+                                            Servidor.upVersionDB(dbFilePath);
                                         }
                                     }
                                 }if(command.startsWith("LOGOUT")){
@@ -246,8 +254,13 @@ public class ClientHandler implements Runnable {
                                     String[] eliminar = command.split(":");
                                     String descricaoDespesa = eliminar[1]; // Pegar a descrição da despesa
 
-                                    String resposta = Servidor.eliminarDespesa(descricaoDespesa, dbFilePath);
-                                    out.println(resposta);
+                                    boolean resposta = Servidor.eliminarDespesa(descricaoDespesa, dbFilePath);
+                                    String toServerResp;
+                                    if(resposta){toServerResp = "Despesa " + descricaoDespesa + " excluída com sucesso.";}
+                                    else{toServerResp = "Despesa não encontrada";}
+                                    out.println(toServerResp);
+                                    Servidor.upVersionDB(dbFilePath);
+
 
                                 }if(command.startsWith("EDITAR DESPESA")){
                                     String[] editar = command.split(":");
@@ -256,8 +269,12 @@ public class ClientHandler implements Runnable {
                                     double novoValor = Double.parseDouble(editar[3]); // Novo valor da despesa
                                     String novaData = editar[4]; // Nova data da despesa
 
-                                    String resposta = Servidor.editarDespesa(descricaoAntiga, novaDescricao, novoValor, novaData, dbFilePath);
-                                    out.println(resposta);
+                                    boolean resposta = Servidor.editarDespesa(descricaoAntiga, novaDescricao, novoValor, novaData, dbFilePath);
+                                    String toServerResp;
+                                    if(resposta){toServerResp = "Despesa " + descricaoAntiga + " editada com sucesso.";}
+                                    else{toServerResp = "Despesa não encontrada";}
+                                    out.println(toServerResp);
+                                    Servidor.upVersionDB(dbFilePath);
                                 }
 
                             }
