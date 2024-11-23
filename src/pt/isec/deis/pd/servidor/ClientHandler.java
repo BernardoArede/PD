@@ -10,17 +10,17 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static pt.isec.deis.pd.dataBase.ManageDB.upVersionDB;
+
 public class ClientHandler implements Runnable {
 
     private final Socket socket;
-    private final Connection connection;
+
     private final String dbFilePath;
-    private boolean _islogged = false;
-    private int listeningPort;
+    private final int listeningPort;
 
     public ClientHandler(int listeningPort,Socket socket, Connection connection, String dbFilePath) {
         this.socket = socket;
-        this.connection = connection;
         this.dbFilePath = dbFilePath;
         this.listeningPort = listeningPort;
     }
@@ -45,7 +45,7 @@ public class ClientHandler implements Runnable {
                     String password = partes[2];
                     if (Servidor.loginUtilizador(username, password, dbFilePath)) {
                         out.println("SUCCESS");
-                        _islogged = true;
+                        boolean _islogged = true;
                         System.out.println("Autenticação bem sucedida para o cliente " + socket.getInetAddress());
 
                         while(_islogged){
@@ -58,7 +58,13 @@ public class ClientHandler implements Runnable {
                                     } else {
                                         if (Servidor.criarGrupo(groupName, username, dbFilePath)) {
                                             out.println("GROUP_CREATED");
-                                            Servidor.upVersionDB(dbFilePath);
+                                            upVersionDB(dbFilePath);
+
+                                             String query = String.format(
+                                                "INSERT INTO grupo (nome) VALUES ('%s')",
+                                                groupName
+                                            );
+                                            Servidor.executeQuery(query);
                                             Servidor.startHeartBeat(listeningPort,dbFilePath);
                                         } else {
                                             out.println("FAIL_CREATE_GROUP");
@@ -77,6 +83,17 @@ public class ClientHandler implements Runnable {
                                     System.out.println(group_to_invite);
                                     if (Servidor.enviarConvite(user_to_invite, group_to_invite, dbFilePath)) {
                                         System.out.println("Enviado com sucesso");
+                                        upVersionDB(dbFilePath);
+
+                                         String query = String.format(
+                                                "INSERT INTO convite(id_grupo, id_utilizador_convidado, estado) VALUES(?, %s, 'pendente')",
+                                                user_to_invite
+                                            );
+                                          Servidor.executeQuery(query);
+                                          Servidor.startHeartBeat(listeningPort,dbFilePath);
+
+
+
                                     } else {
                                         System.out.println("Erro ao enviar convite");
                                     }
@@ -116,7 +133,18 @@ public class ClientHandler implements Runnable {
 
                                     if (Servidor.editarNomeGrupo(username, nomeAtualGrupo, novoNomeGrupo, dbFilePath)) {
                                         out.println("Nome do grupo alterado com sucesso para: " + novoNomeGrupo);
-                                        Servidor.upVersionDB(dbFilePath);
+                                        upVersionDB(dbFilePath);
+
+                                         String query = String.format(
+                                                "UPDATE grupo SET nome = %s WHERE id_grupo = ?",
+                                                novoNomeGrupo
+                                            );
+                                          Servidor.executeQuery(query);
+                                          Servidor.startHeartBeat(listeningPort,dbFilePath);
+
+
+
+
                                     } else {
                                         out.println("Erro: Não foi possível alterar o nome do grupo. Verifique se você pertence ao grupo.");
                                     }
@@ -133,7 +161,16 @@ public class ClientHandler implements Runnable {
 
                                     if (Servidor.inserirDespesa(username, nomeGrupo, descricao, valor, participantes, data, dbFilePath)) {
                                         out.println("Despesa inserida com sucesso.");
-                                        Servidor.upVersionDB(dbFilePath);
+                                       upVersionDB(dbFilePath);
+
+                                       String query = String.format(
+                                                "INSERT INTO despesa (descricao, valor, id_grupo, data, id_utilizador) VALUES (%s, %f, ?, %s, ?)",
+                                                descricao,valor,data
+                                            );
+                                          Servidor.executeQuery(query);
+                                          Servidor.startHeartBeat(listeningPort,dbFilePath);
+
+
                                     } else {
                                         out.println("Erro ao inserir a despesa. Verifique os dados e tente novamente.");
                                     }
@@ -144,7 +181,17 @@ public class ClientHandler implements Runnable {
                                         String nomeGrupo = partes3[1];
                                         if (Servidor.eliminarGrupoPorNome(nomeGrupo, dbFilePath)) {
                                             out.println("Grupo '" + nomeGrupo + "' eliminado com sucesso.");
-                                            Servidor.upVersionDB(dbFilePath);
+                                            upVersionDB(dbFilePath);
+
+                                            String query = String.format(
+                                                "DELETE FROM grupo WHERE nome = %s",
+                                                nomeGrupo
+                                            );
+                                          Servidor.executeQuery(query);
+                                          Servidor.startHeartBeat(listeningPort,dbFilePath);
+
+
+
                                         } else {
                                             out.println("Não foi possível eliminar o grupo. Existem despesas associadas ou o grupo não existe.");
                                         }
@@ -184,7 +231,7 @@ public class ClientHandler implements Runnable {
                                     } else {
                                         out.println("Erro ao obter o histórico ou o utilizador não pertence ao grupo.");
                                     }
-                                }/*if (command.startsWith("EXPORTAR DESPESAS CSV:")) {
+                                }/*+if (command.startsWith("EXPORTAR DESPESAS CSV:")) {
                                     String[] partes4 = command.split(":");
                                     String nomeGrupo = partes4[1];
                                     String caminhoCSV = partes4[2];
@@ -219,6 +266,7 @@ public class ClientHandler implements Runnable {
 
                                     String resposta = Servidor.efetuarPagamento(username, idDivida, valorPagamento, dbFilePath);
                                     out.println(resposta);
+                                    upVersionDB(dbFilePath);
                                 }
                                 if (command.startsWith("VISUALIZAR SALDOS:")) {
                                     String[] partes6 = command.split(":");
@@ -228,7 +276,7 @@ public class ClientHandler implements Runnable {
 
                                     if (saldos.isEmpty()) {
                                         out.println("NENHUM SALDO ENCONTRADO");
-                                    } else {
+                                    }else {
                                         for (Map.Entry<String, Object> entry : saldos.entrySet()) {
                                             String utilizador = entry.getKey();
                                             Map<String, Object> detalhes = (Map<String, Object>) entry.getValue();
@@ -240,7 +288,6 @@ public class ClientHandler implements Runnable {
                                                     .append(", Dividas por Utilizador: ").append(detalhes.get("dividas_por_utilizador"))
                                                     .append(", Recebimentos por Utilizador: ").append(detalhes.get("recebimentos_por_utilizador"));
                                             out.println(resposta);
-                                            Servidor.upVersionDB(dbFilePath);
                                         }
                                     }
                                 }if(command.startsWith("LOGOUT")){
@@ -259,7 +306,17 @@ public class ClientHandler implements Runnable {
                                     if(resposta){toServerResp = "Despesa " + descricaoDespesa + " excluída com sucesso.";}
                                     else{toServerResp = "Despesa não encontrada";}
                                     out.println(toServerResp);
-                                    Servidor.upVersionDB(dbFilePath);
+                                    upVersionDB(dbFilePath);
+
+                                    String query = (
+                                                "DELETE FROM despesa WHERE id_despesa = ?"
+
+                                            );
+                                          Servidor.executeQuery(query);
+                                          Servidor.startHeartBeat(listeningPort,dbFilePath);
+
+
+
 
 
                                 }if(command.startsWith("EDITAR DESPESA")){
@@ -274,7 +331,16 @@ public class ClientHandler implements Runnable {
                                     if(resposta){toServerResp = "Despesa " + descricaoAntiga + " editada com sucesso.";}
                                     else{toServerResp = "Despesa não encontrada";}
                                     out.println(toServerResp);
-                                    Servidor.upVersionDB(dbFilePath);
+                                    upVersionDB(dbFilePath);
+                                    String query = String.format(
+                                                "UPDATE despesa SET descricao = %s, valor = %f, data = %s WHERE id_despesa = ?",
+                                            novaDescricao,novoValor,novaData
+
+                                            );
+                                          Servidor.executeQuery(query);
+                                          Servidor.startHeartBeat(listeningPort,dbFilePath);
+
+
                                 }
 
                             }
@@ -293,7 +359,14 @@ public class ClientHandler implements Runnable {
                         String password = partes[2];
                         String telefone = partes[3];
                         if(Servidor.registoUtilizador(username,password,telefone, dbFilePath)){
-                            Servidor.upVersionDB(dbFilePath);
+                            upVersionDB(dbFilePath);
+
+                            String query = String.format(
+                                "INSERT INTO utilizador (username, password, telefone) VALUES ('%s', '%s', '%s')",
+                                username, password, telefone
+                            );
+                            Servidor.executeQuery(query);
+
                             out.println("SUCCESS");
                             System.out.println("Dados registados com sucesso na base de dados");
                         }else{
@@ -314,8 +387,7 @@ public class ClientHandler implements Runnable {
         } catch (IOException ex) {
             System.out.println("Problema de I/O ao atender o cliente: " + ex.getMessage());
         } finally {
-            /*Este pedaço de codigo não pode estar aqui porque asssim a comunicação com cada cliente
-            vai ser finalizada de forma a que não possa acontecer uma comunicação continua*/
+
             try {
                 socket.close();
                 System.out.println("Socket do cliente foi encerrado");

@@ -8,7 +8,7 @@ import java.net.MulticastSocket;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
-import java.util.Objects;
+
 
 import static java.lang.System.exit;
 import static pt.isec.deis.pd.servidor.Servidor.HEARTBEAT_ADDRESS;
@@ -20,6 +20,7 @@ public class ServidorBackup {
     private static final int TIMEOUT_SECONDS = 30;
     private static final String BACKUP_DIR = "src/pt/isec/deis/pd/Backup/DB_Backup";
      private static final String DB_DIR = "src/pt/isec/deis/pd/resources/identifier.sqlite";
+     private static double localVersion = 0.0;
 
     public static void main(String[] args)  {
 
@@ -49,13 +50,18 @@ public class ServidorBackup {
                     multicastSocket.setSoTimeout(1000);
                     try {
                         DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                        multicastSocket.receive(packet); //bloqueante
+                        multicastSocket.receive(packet);
                         lastHeartbeatTime = Instant.now();
 
-                        String message = new String(packet.getData(), 0, packet.getLength());
-
+                           String message = new String(packet.getData(), 0, packet.getLength());
                         System.out.println("Heartbeat recebido: " + message);
-                        upgradeDataBase();
+
+                        if (processHeartbeat(message)) {
+                            upgradeDataBase();
+                        } else {
+                            System.out.println("Finalizando devido à inconsistência detectada...");
+                            break;
+                        }
 
                     } catch (IOException e) {
 
@@ -68,6 +74,46 @@ public class ServidorBackup {
             }
         } catch (IOException e) {
             System.err.println("Erro no servidor de backup: " + e.getMessage());
+        }
+    }
+
+     private static boolean processHeartbeat(String message) {
+        try {
+            String[] parts = message.split("; ");
+            double version = 0.0;
+            String query = null;
+
+            for (String part : parts) {
+                if (part.startsWith("Versão:")) {
+                    version = Double.parseDouble(part.split(": ")[1]);
+                } else if (part.startsWith("Query:")) {
+                    query = part.split(": ")[1].trim();
+                }
+            }
+
+            if (query == null || query.isEmpty()) {
+
+                if (version != localVersion) {
+                    System.out.println("Versão incompatível sem query! Local: " + localVersion + ", Recebida: " + version);
+                    return false;
+                }
+            } else {
+
+                if (version != localVersion + 1) {
+                    System.out.println("Versão incompatível com query! Local: " + localVersion + ", Recebida: " + version);
+                    return false;
+                }
+
+                System.out.println("Query recebida: " + query);
+            }
+
+
+            localVersion = version;
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("Erro ao processar heartbeat: " + e.getMessage());
+            return false;
         }
     }
 

@@ -1,9 +1,7 @@
 package pt.isec.deis.pd.dataBase;
 
 import java.io.File;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.Statement;
+import java.sql.*;
 
 public class ManageDB {
 
@@ -103,9 +101,47 @@ public class ManageDB {
         }
     }
 
+    public static double getVersion(String dbPath) {
+        String url = "jdbc:sqlite:" + dbPath;
+        String sql = "SELECT db_version FROM db_version";
 
+        try (Connection connection = DriverManager.getConnection(url);
+             PreparedStatement preparedStatement = connection.prepareStatement(sql);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
 
+            if (resultSet.next()) {
+                return resultSet.getDouble("db_version");
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return 0;
+    }
+
+    public static void upVersionDB(String dbPath) {
+                    String url = "jdbc:sqlite:" + dbPath;
+                    String selectSql = "SELECT db_version FROM db_version";
+                    String updateSql = "UPDATE db_version SET db_version = ?";
+
+                    try (Connection connection = DriverManager.getConnection(url);
+                         PreparedStatement selectStatement = connection.prepareStatement(selectSql);
+                         ResultSet resultSet = selectStatement.executeQuery()) {
+
+                        if (resultSet.next()) {
+                            double currentVersion = resultSet.getDouble("db_version");
+                            double newVersion = currentVersion + 0.1;
+
+                            try (PreparedStatement updateStatement = connection.prepareStatement(updateSql)) {
+                                updateStatement.setDouble(1, newVersion);
+                                updateStatement.executeUpdate();
+                                System.out.println("Versão atualizada para: " + newVersion);
+                            }
+                        }
+
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+    }
 
 }
-
-

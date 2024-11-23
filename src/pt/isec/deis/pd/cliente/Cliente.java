@@ -245,10 +245,7 @@ public class Cliente {
                                     break;
 
                                 case 12:
-                                    /*TODO->Eliminar uma despesa-> Podemos inserir para listar despesas
-                                       antes apesar de não ser necessario*/
-
-                                     sc.nextLine();
+                                    sc.nextLine();
                                      System.out.println("Indique o nome da despesa que deseja excluir:");
                                     String nomeDespesa = sc.nextLine();
 

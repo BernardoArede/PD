@@ -7,6 +7,8 @@ import java.io.*;
 import java.sql.*;
 import java.util.*;
 
+import static pt.isec.deis.pd.dataBase.ManageDB.getVersion;
+
 
 public class Servidor  {
 
@@ -15,48 +17,7 @@ public class Servidor  {
     public static final String HEARTBEAT_ADDRESS = "230.44.44.44"; //Address de multicast
     private static final int TIMEOUT = 5000000;
 
-    public static double getVersion(String dbPath) {
-    String url = "jdbc:sqlite:" + dbPath;
-    String sql = "SELECT db_version FROM db_version";
-
-    try (Connection connection = DriverManager.getConnection(url);
-         PreparedStatement preparedStatement = connection.prepareStatement(sql);
-         ResultSet resultSet = preparedStatement.executeQuery()) {
-
-        if (resultSet.next()) {
-            return resultSet.getDouble("db_version");
-        }
-    } catch (SQLException e) {
-        System.out.println(e.getMessage());
-    }
-
-    return 0;
-}
-
-    public static void upVersionDB(String dbPath) {
-                    String url = "jdbc:sqlite:" + dbPath;
-                    String selectSql = "SELECT db_version FROM db_version";
-                    String updateSql = "UPDATE db_version SET db_version = ?";
-
-                    try (Connection connection = DriverManager.getConnection(url);
-                         PreparedStatement selectStatement = connection.prepareStatement(selectSql);
-                         ResultSet resultSet = selectStatement.executeQuery()) {
-
-                        if (resultSet.next()) {
-                            double currentVersion = resultSet.getDouble("db_version");
-                            double newVersion = currentVersion + 0.1;
-
-                            try (PreparedStatement updateStatement = connection.prepareStatement(updateSql)) {
-                                updateStatement.setDouble(1, newVersion);
-                                updateStatement.executeUpdate();
-                                System.out.println("Versão atualizada para: " + newVersion);
-                            }
-                        }
-
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                }
+    private static final List<String> queryQueue = new ArrayList<>();
 
     public static boolean loginUtilizador(String email, String password, String dbPath) {
 
@@ -121,7 +82,19 @@ public class Servidor  {
                             public void run() {
                                 try {
                                         double version = getVersion(dbPath);
-                                        String message = String.format("Versão da base de dados: %.1f, Porto de escuta para backup: %d", version, listeningPort);
+
+                                         String queriesToSend;
+                                            synchronized (queryQueue) {
+                                            queriesToSend = String.join(";", queryQueue);
+                                            queryQueue.clear();
+                                        }
+
+                                        String message = String.format(
+                                            "Versão: %.1f; Queries: [%s]; Porto: %d",
+                                            version, queriesToSend, listeningPort
+                                        );
+
+
                                         sendHeartbeat(message);
                                 } catch (IOException e) {
                                     System.out.println("Erro ao enviar heartbeat: " + e.getMessage());
@@ -141,6 +114,13 @@ public class Servidor  {
                             multicastSocket.send(packet);
                             System.out.println("Heartbeat enviado: " + message);
                         }
+    }
+
+    public static void executeQuery(String query) {
+        System.out.println("A executar query: " + query);
+        synchronized (queryQueue) {
+            queryQueue.add(query);
+        }
     }
 
     public static boolean grupoExiste(String groupName, String dbFilePath) {
