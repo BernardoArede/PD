@@ -9,7 +9,6 @@ import java.util.*;
 
 import static pt.isec.deis.pd.dataBase.ManageDB.getVersion;
 
-
 public class Servidor  {
 
     private static final int HEARTBEAT_INTERVAL = 10000; // Intervalo
@@ -199,12 +198,12 @@ public class Servidor  {
     public static void imprimeGrupos(String username, String dbFilePath, PrintWriter out) {
                     String url = "jdbc:sqlite:" + dbFilePath;
                     String sql = """
-                        SELECT g.nome 
+                        SELECT g.nome
                         FROM grupo g
                         INNER JOIN grupo_utilizador gu ON g.id_grupo = gu.id_grupo
                         INNER JOIN utilizador u ON gu.id_utilizador = u.id_utilizador
                         WHERE u.email = ?
-                    """;
+                   """;
 
                     try (Connection connection = DriverManager.getConnection(url);
                          PreparedStatement preparedStatement = connection.prepareStatement(sql)) {

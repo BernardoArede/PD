@@ -261,12 +261,12 @@ public class Cliente {
                                     String nomeGrupoCSV = sc.nextLine();
 
 
-                                    System.out.print("Deseja salvar no caminho padrão (ExportacaoCSV)? (s/n): ");
+                                    System.out.print("Deseja salvar no caminho padrão (csv/despesas.csv)? (s/n): ");
                                     String escolhaCaminho = sc.nextLine().trim().toLowerCase();
 
                                     String caminhoCSV;
                                     if (escolhaCaminho.equals("s")) {
-                                        caminhoCSV = "ExportacaoCSV";
+                                        caminhoCSV = "csv/despesas.csv";
                                     } else {
                                         System.out.print("Digite o caminho completo para salvar o ficheiro CSV (ex: C:\\Users\\user\\Desktop\\despesas.csv): ");
                                         caminhoCSV = sc.nextLine();
