@@ -106,8 +106,6 @@ public class ServidorBackup {
 
                 System.out.println("Query recebida: " + query);
             }
-
-
             localVersion = version;
             return true;
 

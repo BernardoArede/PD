@@ -150,36 +150,34 @@ public class Servidor  {
                     String sqlAddMember = "INSERT INTO grupo_utilizador(id_grupo, id_utilizador) VALUES(?, ?)";
 
                     try (Connection connection = DriverManager.getConnection(url)) {
-                        connection.setAutoCommit(false);  // Usar transações
+                        connection.setAutoCommit(false);
 
                         try (PreparedStatement insertGroupStmt = connection.prepareStatement(sqlInsertGroup);
                              PreparedStatement getUserIdStmt = connection.prepareStatement(sqlGetUserId);
                              PreparedStatement getGroupIdStmt = connection.prepareStatement(sqlGetGroupId);
                              PreparedStatement addMemberStmt = connection.prepareStatement(sqlAddMember)) {
 
-                            // Inserir o grupo
+
                             insertGroupStmt.setString(1, groupName);
                             insertGroupStmt.executeUpdate();
 
-                            // Obter o ID do utilizador que criou o grupo
+
                             getUserIdStmt.setString(1, creatorEmail);
                             ResultSet userIdResult = getUserIdStmt.executeQuery();
                             if (!userIdResult.next()) {
-                                connection.rollback();  // Se não encontrar o utilizador, desfaz a transação
+                                connection.rollback();
                                 return false;
                             }
                             int userId = userIdResult.getInt("id_utilizador");
 
-                            // Obter o ID do grupo recém-criado
+
                             getGroupIdStmt.setString(1, groupName);
                             ResultSet groupIdResult = getGroupIdStmt.executeQuery();
                             if (!groupIdResult.next()) {
-                                connection.rollback();  // Se não encontrar o grupo, desfaz a transação
+                                connection.rollback();
                                 return false;
                             }
                             int groupId = groupIdResult.getInt("id_grupo");
-
-                            // Adicionar o criador como membro do grupo
                             addMemberStmt.setInt(1, groupId);
                             addMemberStmt.setInt(2, userId);
                             addMemberStmt.executeUpdate();
@@ -188,7 +186,7 @@ public class Servidor  {
 
                             return true;
                         } catch (SQLException e) {
-                            connection.rollback();  // Desfaz a transação em caso de erro
+                            connection.rollback();
                             e.printStackTrace();
                         }
                     } catch (SQLException e) {
@@ -211,25 +209,23 @@ public class Servidor  {
                     try (Connection connection = DriverManager.getConnection(url);
                          PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-                        // Definir o parâmetro da consulta
+
                         preparedStatement.setString(1, username);
 
-                        // Executar a consulta
+
                         ResultSet resultSet = preparedStatement.executeQuery();
 
-                        // Verificar se o utilizador pertence a algum grupo
                         boolean hasGroups = false;
                         while (resultSet.next()) {
                             hasGroups = true;
                             String groupName = resultSet.getString("nome");
-                            out.println("Grupo: " + groupName);  // Enviar o nome do grupo para o cliente
+                            out.println("Grupo: " + groupName);
                         }
 
                         if (!hasGroups) {
                             out.println("Não pertence a nenhum grupo.");
                         }
 
-                        // Enviar "FIM" para indicar o término da lista
                         out.println("FIM");
 
                     } catch (SQLException e) {
@@ -293,7 +289,7 @@ public class Servidor  {
                          PreparedStatement getUserIdStmt = connection.prepareStatement(sqlGetUserId);
                          PreparedStatement getConvitesStmt = connection.prepareStatement(sqlGetConvites)) {
 
-                        // Obter o ID do utilizador
+
                         getUserIdStmt.setString(1, username);
                         ResultSet userResultSet = getUserIdStmt.executeQuery();
                         if (!userResultSet.next()) {
@@ -301,11 +297,10 @@ public class Servidor  {
                         }
                         int userId = userResultSet.getInt("id_utilizador");
 
-                        // Obter convites pendentes
+
                         getConvitesStmt.setInt(1, userId);
                         ResultSet convitesResultSet = getConvitesStmt.executeQuery();
 
-                        // Preencher a lista com os nomes dos grupos
                         while (convitesResultSet.next()) {
                             gruposPendentes.add(convitesResultSet.getString("nome"));
                         }
@@ -329,7 +324,7 @@ public class Servidor  {
                          PreparedStatement updateConviteStmt = connection.prepareStatement(sqlUpdateConvite);
                          PreparedStatement addUserToGroupStmt = connection.prepareStatement(sqlAddUserToGroup)) {
 
-                        // Obter o ID do grupo
+
                         getGroupIdStmt.setString(1, nomeGrupo);
                         ResultSet groupResultSet = getGroupIdStmt.executeQuery();
                         if (!groupResultSet.next()) {
@@ -337,7 +332,7 @@ public class Servidor  {
                         }
                         int groupId = groupResultSet.getInt("id_grupo");
 
-                        // Obter o ID do utilizador
+
                         getUserIdStmt.setString(1, username);
                         ResultSet userResultSet = getUserIdStmt.executeQuery();
                         if (!userResultSet.next()) {
@@ -345,7 +340,6 @@ public class Servidor  {
                         }
                         int userId = userResultSet.getInt("id_utilizador");
 
-                        // Atualizar o estado do convite para "aceite"
                         updateConviteStmt.setInt(1, groupId);
                         updateConviteStmt.setInt(2, userId);
                         int rowsAffected = updateConviteStmt.executeUpdate();
@@ -382,7 +376,7 @@ public class Servidor  {
                              PreparedStatement verificarMembroStmt = connection.prepareStatement(sqlVerificarMembro);
                              PreparedStatement atualizarNomeGrupoStmt = connection.prepareStatement(sqlAtualizarNomeGrupo)) {
 
-                            // Verificar se o utilizador é membro do grupo
+
                             verificarMembroStmt.setString(1, username);
                             verificarMembroStmt.setString(2, nomeAtualGrupo);
                             ResultSet resultSet = verificarMembroStmt.executeQuery();
@@ -393,7 +387,7 @@ public class Servidor  {
 
                             int grupoId = resultSet.getInt("id_grupo");
 
-                            // Atualizar o nome do grupo
+
                             atualizarNomeGrupoStmt.setString(1, novoNomeGrupo);
                             atualizarNomeGrupoStmt.setInt(2, grupoId);
                             atualizarNomeGrupoStmt.executeUpdate();
@@ -428,7 +422,6 @@ public class Servidor  {
                              PreparedStatement inserirParticipacaoStmt = connection.prepareStatement(sqlInserirParticipacao);
                              PreparedStatement obterIdUtilizadorStmt = connection.prepareStatement(sqlObterIdUtilizador)) {
 
-                            // Obter ID do grupo
                             obterIdGrupoStmt.setString(1, usernameInseriu);
                             obterIdGrupoStmt.setString(2, nomeGrupo);
                             ResultSet resultSetGrupo = obterIdGrupoStmt.executeQuery();
@@ -438,7 +431,7 @@ public class Servidor  {
                             }
                             int grupoId = resultSetGrupo.getInt("id_grupo");
 
-                            // Obter ID do utilizador que inseriu a despesa
+
                             obterIdUtilizadorStmt.setString(1, usernameInseriu);
                             ResultSet resultSetUtilizador = obterIdUtilizadorStmt.executeQuery();
                             if (!resultSetUtilizador.next()) {
@@ -447,7 +440,7 @@ public class Servidor  {
                             }
                             int idInseriu = resultSetUtilizador.getInt("id_utilizador");
 
-                            // Inserir despesa na tabela `despesa`
+
                             inserirDespesaStmt.setString(1, descricao);
                             inserirDespesaStmt.setDouble(2, valor);
                             inserirDespesaStmt.setInt(3, grupoId);
@@ -556,22 +549,21 @@ public class Servidor  {
              PreparedStatement verificaStmt = connection.prepareStatement(sqlVerificaDespesas);
              PreparedStatement saiStmt = connection.prepareStatement(sqlSairDoGrupo)) {
 
-            // Verifica se existem despesas associadas ao utilizador no grupo
+
             verificaStmt.setString(1, nomeGrupo);
             verificaStmt.setString(2, username);
             ResultSet resultSet = verificaStmt.executeQuery();
 
             if (resultSet.next() && resultSet.getInt("count") > 0) {
-                // Existem despesas associadas ao utilizador no grupo
+
                 return false;
             }
 
-            // Se não houver despesas, sai do grupo
+
             saiStmt.setString(1, nomeGrupo);
             saiStmt.setString(2, username);
             int rowsAffected = saiStmt.executeUpdate();
 
-            // Retorna true se o utilizador saiu com sucesso do grupo
             return rowsAffected > 0;
 
         } catch (SQLException e) {
@@ -583,7 +575,7 @@ public class Servidor  {
     public static double obterTotalGastos(String nomeGrupo, String username, String dbFilePath) {
         String url = "jdbc:sqlite:" + dbFilePath;
 
-        // SQL para obter o ID do grupo com base no nome do grupo e no utilizador
+
         String sqlObterIdGrupo = """
             SELECT gu.id_grupo 
             FROM grupo_utilizador gu 
@@ -627,7 +619,7 @@ public class Servidor  {
     public static List<String> obterHistoricoDespesas(String nomeGrupo, String username, String dbFilePath) {
             String url = "jdbc:sqlite:" + dbFilePath;
 
-            // SQL para obter o ID do grupo com base no nome do grupo e no utilizador
+
             String sqlObterIdGrupo = """
                 SELECT gu.id_grupo 
                 FROM grupo_utilizador gu 
@@ -635,7 +627,7 @@ public class Servidor  {
                 JOIN grupo g ON gu.id_grupo = g.id_grupo 
                 WHERE u.email = ? AND g.nome = ?""";
 
-            // SQL para obter o histórico de despesas
+
             String sqlHistoricoDespesas = """
                 SELECT d.descricao, d.valor, d.data, u.email AS inserido_por
                 FROM despesa d
@@ -649,7 +641,7 @@ public class Servidor  {
                  PreparedStatement obterIdGrupoStmt = connection.prepareStatement(sqlObterIdGrupo);
                  PreparedStatement historicoDespesasStmt = connection.prepareStatement(sqlHistoricoDespesas)) {
 
-                // Obter ID do grupo
+
                 obterIdGrupoStmt.setString(1, username);
                 obterIdGrupoStmt.setString(2, nomeGrupo);
                 ResultSet resultSetGrupo = obterIdGrupoStmt.executeQuery();
@@ -660,7 +652,7 @@ public class Servidor  {
 
                 int grupoId = resultSetGrupo.getInt("id_grupo");
 
-                // Obter histórico de despesas
+
                 historicoDespesasStmt.setInt(1, grupoId);
                 ResultSet resultSetHistorico = historicoDespesasStmt.executeQuery();
 
@@ -676,7 +668,7 @@ public class Servidor  {
                 }
             } catch (SQLException e) {
                 System.out.println(e.getMessage());
-                return null;  // Erro ao acessar a base de dados
+                return null;
             }
 
             return historico;
@@ -739,7 +731,7 @@ public class Servidor  {
                           return "Valor do pagamento excede a dívida.";
                       }
 
-                      // Inserir na tabela de pagamento
+
                       String sqlPagamento = """
                     INSERT INTO pagamento (valor, id_utilizador_pagador, id_utilizador_recebedor, id_despesa, data)
                     VALUES (?, (SELECT id_utilizador FROM utilizador WHERE email = ?), ?, ?, CURRENT_DATE)
@@ -753,7 +745,6 @@ public class Servidor  {
                           pstmtPagamento.executeUpdate();
                       }
 
-                      // Atualizar a tabela despesa_utilizador para remover a dívida
                       String sqlRemoverDivida = """
                     DELETE FROM despesa_utilizador
                     WHERE id_despesa = ? AND id_utilizador = (SELECT id_utilizador FROM utilizador WHERE email = ?)
@@ -779,172 +770,272 @@ public class Servidor  {
       }
 
     public static Map<String, Object> visualizarSaldos(String nomeGrupo, String dbFilePath) {
-    Map<String, Object> saldos = new HashMap<>();
+        Map<String, Object> saldos = new HashMap<>();
 
-    try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
-        // Obter id do grupo
-        String sqlGrupo = "SELECT id_grupo FROM grupo WHERE nome = ?";
-        PreparedStatement stmtGrupo = conn.prepareStatement(sqlGrupo);
-        stmtGrupo.setString(1, nomeGrupo);
-        ResultSet rsGrupo = stmtGrupo.executeQuery();
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
 
-        if (rsGrupo.next()) {
-            int idGrupo = rsGrupo.getInt("id_grupo");
+            String sqlGrupo = "SELECT id_grupo FROM grupo WHERE nome = ?";
+            PreparedStatement stmtGrupo = conn.prepareStatement(sqlGrupo);
+            stmtGrupo.setString(1, nomeGrupo);
+            ResultSet rsGrupo = stmtGrupo.executeQuery();
 
-            // Obter utilizadores do grupo
-            String sqlUtilizadores = "SELECT u.id_utilizador, u.email " +
-                    "FROM utilizador u " +
-                    "JOIN grupo_utilizador gu ON u.id_utilizador = gu.id_utilizador " +
-                    "WHERE gu.id_grupo = ?";
-            PreparedStatement stmtUtilizadores = conn.prepareStatement(sqlUtilizadores);
-            stmtUtilizadores.setInt(1, idGrupo);
-            ResultSet rsUtilizadores = stmtUtilizadores.executeQuery();
+            if (rsGrupo.next()) {
+                int idGrupo = rsGrupo.getInt("id_grupo");
 
-            while (rsUtilizadores.next()) {
-                int idUtilizador = rsUtilizadores.getInt("id_utilizador");
-                String emailUtilizador = rsUtilizadores.getString("email");
+                String sqlUtilizadores = "SELECT u.id_utilizador, u.email " +
+                        "FROM utilizador u " +
+                        "JOIN grupo_utilizador gu ON u.id_utilizador = gu.id_utilizador " +
+                        "WHERE gu.id_grupo = ?";
+                PreparedStatement stmtUtilizadores = conn.prepareStatement(sqlUtilizadores);
+                stmtUtilizadores.setInt(1, idGrupo);
+                ResultSet rsUtilizadores = stmtUtilizadores.executeQuery();
+
+                while (rsUtilizadores.next()) {
+                    int idUtilizador = rsUtilizadores.getInt("id_utilizador");
+                    String emailUtilizador = rsUtilizadores.getString("email");
 
 
-                double gastoTotal = 0;
-                double totalDeve = 0;
-                double totalReceber = 0;
-                Map<String, Double> dividasPorUtilizador = new HashMap<>();
-                Map<String, Double> recebimentosPorUtilizador = new HashMap<>();
+                    double gastoTotal = 0;
+                    double totalDeve = 0;
+                    double totalReceber = 0;
+                    Map<String, Double> dividasPorUtilizador = new HashMap<>();
+                    Map<String, Double> recebimentosPorUtilizador = new HashMap<>();
 
-                // Obter despesas criadas pelo utilizador
-                String sqlGastos = "SELECT SUM(d.valor) as gasto_total " +
-                                   "FROM despesa d " +
-                                   "WHERE d.id_utilizador = ? AND d.id_grupo = ?";
-                PreparedStatement stmtGastos = conn.prepareStatement(sqlGastos);
-                stmtGastos.setInt(1, idUtilizador);
-                stmtGastos.setInt(2, idGrupo);
-                ResultSet rsGastos = stmtGastos.executeQuery();
-                if (rsGastos.next()) {
-                    gastoTotal = rsGastos.getDouble("gasto_total");
+                    String sqlGastos = "SELECT SUM(d.valor) as gasto_total " +
+                                       "FROM despesa d " +
+                                       "WHERE d.id_utilizador = ? AND d.id_grupo = ?";
+                    PreparedStatement stmtGastos = conn.prepareStatement(sqlGastos);
+                    stmtGastos.setInt(1, idUtilizador);
+                    stmtGastos.setInt(2, idGrupo);
+                    ResultSet rsGastos = stmtGastos.executeQuery();
+                    if (rsGastos.next()) {
+                        gastoTotal = rsGastos.getDouble("gasto_total");
+                    }
+
+                    String sqlDividas = "SELECT u.email, du.valor_participacao " +
+                                        "FROM despesa_utilizador du " +
+                                        "JOIN despesa d ON du.id_despesa = d.id_despesa " +
+                                        "JOIN utilizador u ON d.id_utilizador = u.id_utilizador " +
+                                        "WHERE d.id_grupo = ? AND du.id_utilizador = ?";
+                    PreparedStatement stmtDividas = conn.prepareStatement(sqlDividas);
+                    stmtDividas.setInt(1, idGrupo);
+                    stmtDividas.setInt(2, idUtilizador);
+                    ResultSet rsDividas = stmtDividas.executeQuery();
+                    while (rsDividas.next()) {
+                        String emailCredor = rsDividas.getString("email");
+                        double valorDivida = rsDividas.getDouble("valor_participacao");
+                        totalDeve += valorDivida;
+
+
+                        dividasPorUtilizador.put(emailCredor, valorDivida);
+                    }
+
+                    String sqlRecebimentos = "SELECT u.email, du.valor_participacao " +
+                                             "FROM despesa_utilizador du " +
+                                             "JOIN despesa d ON du.id_despesa = d.id_despesa " +
+                                             "JOIN utilizador u ON du.id_utilizador = u.id_utilizador " +
+                                             "WHERE d.id_grupo = ? AND d.id_utilizador = ?";
+                    PreparedStatement stmtRecebimentos = conn.prepareStatement(sqlRecebimentos);
+                    stmtRecebimentos.setInt(1, idGrupo);
+                    stmtRecebimentos.setInt(2, idUtilizador);
+                    ResultSet rsRecebimentos = stmtRecebimentos.executeQuery();
+                    while (rsRecebimentos.next()) {
+                        String emailDevedor = rsRecebimentos.getString("email");
+                        double valorRecebimento = rsRecebimentos.getDouble("valor_participacao");
+                        totalReceber += valorRecebimento;
+
+                        recebimentosPorUtilizador.put(emailDevedor, valorRecebimento);
+                    }
+
+                    Map<String, Object> detalhes = new HashMap<>();
+                    detalhes.put("gasto_total", gastoTotal);
+                    detalhes.put("total_deve", totalDeve);
+                    detalhes.put("total_receber", totalReceber);
+                    detalhes.put("dividas_por_utilizador", dividasPorUtilizador);
+                    detalhes.put("recebimentos_por_utilizador", recebimentosPorUtilizador);
+
+                    saldos.put(emailUtilizador, detalhes);
                 }
-
-                // Obter total que deve a outros utilizadores
-                String sqlDividas = "SELECT u.email, du.valor_participacao " +
-                                    "FROM despesa_utilizador du " +
-                                    "JOIN despesa d ON du.id_despesa = d.id_despesa " +
-                                    "JOIN utilizador u ON d.id_utilizador = u.id_utilizador " +
-                                    "WHERE d.id_grupo = ? AND du.id_utilizador = ?";
-                PreparedStatement stmtDividas = conn.prepareStatement(sqlDividas);
-                stmtDividas.setInt(1, idGrupo);
-                stmtDividas.setInt(2, idUtilizador);
-                ResultSet rsDividas = stmtDividas.executeQuery();
-                while (rsDividas.next()) {
-                    String emailCredor = rsDividas.getString("email");
-                    double valorDivida = rsDividas.getDouble("valor_participacao");
-                    totalDeve += valorDivida;
-
-
-                    dividasPorUtilizador.put(emailCredor, valorDivida);
-                }
-
-
-                String sqlRecebimentos = "SELECT u.email, du.valor_participacao " +
-                                         "FROM despesa_utilizador du " +
-                                         "JOIN despesa d ON du.id_despesa = d.id_despesa " +
-                                         "JOIN utilizador u ON du.id_utilizador = u.id_utilizador " +
-                                         "WHERE d.id_grupo = ? AND d.id_utilizador = ?";
-                PreparedStatement stmtRecebimentos = conn.prepareStatement(sqlRecebimentos);
-                stmtRecebimentos.setInt(1, idGrupo);
-                stmtRecebimentos.setInt(2, idUtilizador);
-                ResultSet rsRecebimentos = stmtRecebimentos.executeQuery();
-                while (rsRecebimentos.next()) {
-                    String emailDevedor = rsRecebimentos.getString("email");
-                    double valorRecebimento = rsRecebimentos.getDouble("valor_participacao");
-                    totalReceber += valorRecebimento;
-
-                    recebimentosPorUtilizador.put(emailDevedor, valorRecebimento);
-                }
-
-                // Adicionar informações ao mapa de saldos
-                Map<String, Object> detalhes = new HashMap<>();
-                detalhes.put("gasto_total", gastoTotal);
-                detalhes.put("total_deve", totalDeve);
-                detalhes.put("total_receber", totalReceber);
-                detalhes.put("dividas_por_utilizador", dividasPorUtilizador);
-                detalhes.put("recebimentos_por_utilizador", recebimentosPorUtilizador);
-
-                saldos.put(emailUtilizador, detalhes);
             }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
 
-    } catch (SQLException e) {
-        e.printStackTrace();
+        return saldos;
     }
-
-    return saldos;
-}
 
     public static boolean eliminarDespesa(String descricao, String dbFilePath) {
-    try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
-        // Primeiro, vamos obter o ID da despesa com a descrição fornecida
-        String sqlGetId = "SELECT id_despesa FROM despesa WHERE descricao = ?";
-        try (PreparedStatement pstmt = conn.prepareStatement(sqlGetId)) {
-            pstmt.setString(1, descricao);
-            ResultSet rs = pstmt.executeQuery();
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
 
-            if (rs.next()) {
-                int idDespesa = rs.getInt("id_despesa");
+            String sqlGetId = "SELECT id_despesa FROM despesa WHERE descricao = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlGetId)) {
+                pstmt.setString(1, descricao);
+                ResultSet rs = pstmt.executeQuery();
 
-                // Excluir da tabela despesa_utilizador
-                String sqlDeleteUtilizador = "DELETE FROM despesa_utilizador WHERE id_despesa = ?";
-                try (PreparedStatement pstmtDelete = conn.prepareStatement(sqlDeleteUtilizador)) {
-                    pstmtDelete.setInt(1, idDespesa);
-                    pstmtDelete.executeUpdate();
+                if (rs.next()) {
+                    int idDespesa = rs.getInt("id_despesa");
+
+                    String sqlDeleteUtilizador = "DELETE FROM despesa_utilizador WHERE id_despesa = ?";
+                    try (PreparedStatement pstmtDelete = conn.prepareStatement(sqlDeleteUtilizador)) {
+                        pstmtDelete.setInt(1, idDespesa);
+                        pstmtDelete.executeUpdate();
+                    }
+
+                    String sqlDeleteDespesa = "DELETE FROM despesa WHERE id_despesa = ?";
+                    try (PreparedStatement pstmtDeleteDespesa = conn.prepareStatement(sqlDeleteDespesa)) {
+                        pstmtDeleteDespesa.setInt(1, idDespesa);
+                        pstmtDeleteDespesa.executeUpdate();
+                    }
+
+                    return true;
+
+                } else {
+                   return false;
                 }
-
-                // Excluir da tabela despesa
-                String sqlDeleteDespesa = "DELETE FROM despesa WHERE id_despesa = ?";
-                try (PreparedStatement pstmtDeleteDespesa = conn.prepareStatement(sqlDeleteDespesa)) {
-                    pstmtDeleteDespesa.setInt(1, idDespesa);
-                    pstmtDeleteDespesa.executeUpdate();
-                }
-
-                return true;
-
-            } else {
-               return false;
             }
+        } catch (SQLException e) {
+            return false;
         }
-    } catch (SQLException e) {
-        return false;
     }
-}
 
     public static boolean editarDespesa(String descricaoAntiga, String novaDescricao, double novoValor, String novaData, String dbFilePath) {
-    try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
-        // Primeiro, vamos obter o ID da despesa com a descrição fornecida
-        String sqlGetId = "SELECT id_despesa FROM despesa WHERE descricao = ?";
-        try (PreparedStatement pstmt = conn.prepareStatement(sqlGetId)) {
-            pstmt.setString(1, descricaoAntiga);
-            ResultSet rs = pstmt.executeQuery();
+        try (Connection conn = DriverManager.getConnection("jdbc:sqlite:" + dbFilePath)) {
 
-            if (rs.next()) {
-                int idDespesa = rs.getInt("id_despesa");
+            String sqlGetId = "SELECT id_despesa FROM despesa WHERE descricao = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlGetId)) {
+                pstmt.setString(1, descricaoAntiga);
+                ResultSet rs = pstmt.executeQuery();
 
-                // Atualizar a despesa
-                String sqlUpdate = "UPDATE despesa SET descricao = ?, valor = ?, data = ? WHERE id_despesa = ?";
-                try (PreparedStatement pstmtUpdate = conn.prepareStatement(sqlUpdate)) {
-                    pstmtUpdate.setString(1, novaDescricao);
-                    pstmtUpdate.setDouble(2, novoValor);
-                    pstmtUpdate.setString(3, novaData);
-                    pstmtUpdate.setInt(4, idDespesa);
-                    pstmtUpdate.executeUpdate();
+                if (rs.next()) {
+                    int idDespesa = rs.getInt("id_despesa");
+
+                    String sqlUpdate = "UPDATE despesa SET descricao = ?, valor = ?, data = ? WHERE id_despesa = ?";
+                    try (PreparedStatement pstmtUpdate = conn.prepareStatement(sqlUpdate)) {
+                        pstmtUpdate.setString(1, novaDescricao);
+                        pstmtUpdate.setDouble(2, novoValor);
+                        pstmtUpdate.setString(3, novaData);
+                        pstmtUpdate.setInt(4, idDespesa);
+                        pstmtUpdate.executeUpdate();
+                    }
+
+                    return true;
+                } else {
+                    return false;
                 }
+            }
+        } catch (SQLException e) {
+            return false;
+        }
+    }
 
-                return true;
-            } else {
+    public static boolean exportarDespesasCSV(String nomeGrupo, String caminhoCSV, String username, String dbFilePath) {
+        String url = "jdbc:sqlite:" + dbFilePath;
+
+        String sqlGrupo = """
+            SELECT id_grupo
+            FROM grupo
+            WHERE nome = ?
+        """;
+
+        String sqlElementos = """
+            SELECT u.email
+            FROM grupo_utilizador gu
+            JOIN utilizador u ON gu.id_utilizador = u.id_utilizador
+            WHERE gu.id_grupo = ?
+        """;
+
+        String sqlDespesas = """
+            SELECT d.data, 
+                   u.email AS responsavel, 
+                   d.valor, 
+                   COALESCE((SELECT u2.email 
+                             FROM pagamento p 
+                             JOIN utilizador u2 ON p.id_utilizador_pagador = u2.id_utilizador
+                             WHERE p.id_despesa = d.id_despesa 
+                             LIMIT 1), 'Não especificado') AS pago_por,
+                   (SELECT GROUP_CONCAT(email, ';') 
+                    FROM (SELECT DISTINCT u3.email 
+                          FROM despesa_utilizador du 
+                          JOIN utilizador u3 ON du.id_utilizador = u3.id_utilizador 
+                          WHERE du.id_despesa = d.id_despesa)
+                   ) AS a_dividir_com
+            FROM despesa d
+            JOIN utilizador u ON d.id_utilizador = u.id_utilizador
+            WHERE d.id_grupo = ?
+            GROUP BY d.id_despesa
+            ORDER BY d.data;
+        """;
+
+        try (Connection conn = DriverManager.getConnection(url)) {
+
+            int idGrupo;
+            try (PreparedStatement stmtGrupo = conn.prepareStatement(sqlGrupo)) {
+                stmtGrupo.setString(1, nomeGrupo);
+                ResultSet rsGrupo = stmtGrupo.executeQuery();
+                if (!rsGrupo.next()) {
+                    System.out.println("Grupo não encontrado: " + nomeGrupo);
+                    return false;
+                }
+                idGrupo = rsGrupo.getInt("id_grupo");
+            }
+
+
+            boolean pertenceAoGrupo = false;
+            List<String> elementos = new ArrayList<>();
+
+            try (PreparedStatement stmtElementos = conn.prepareStatement(sqlElementos)) {
+                stmtElementos.setInt(1, idGrupo);
+                ResultSet rsElementos = stmtElementos.executeQuery();
+                while (rsElementos.next()) {
+                    String email = rsElementos.getString("email");
+                    elementos.add(email);
+                    if (email.equalsIgnoreCase(username)) {
+                        pertenceAoGrupo = true;
+                    }
+                }
+            }
+
+            if (!pertenceAoGrupo) {
+                System.out.println("Utilizador não pertence ao grupo: " + username);
                 return false;
             }
+
+
+            StringBuilder csvContent = new StringBuilder();
+            csvContent.append("Nome do grupo\n").append(nomeGrupo).append("\n");
+            csvContent.append("Elementos\n").append(String.join(";", elementos)).append("\n");
+            csvContent.append("Data;Responsável pelo registo da despesa;Valor;Pago por;A dividir com\n");
+
+
+            try (PreparedStatement stmtDespesas = conn.prepareStatement(sqlDespesas)) {
+                stmtDespesas.setInt(1, idGrupo);
+                ResultSet rsDespesas = stmtDespesas.executeQuery();
+                while (rsDespesas.next()) {
+                    String data = rsDespesas.getString("data");
+                    String responsavel = rsDespesas.getString("responsavel");
+                    double valor = rsDespesas.getDouble("valor");
+                    String pagoPor = rsDespesas.getString("pago_por");
+                    String aDividirCom = rsDespesas.getString("a_dividir_com");
+
+                    csvContent.append(String.format("%s;%s;%.2f;%s;%s\n",
+                            data, responsavel, valor, pagoPor, aDividirCom));
+                }
+            }
+
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(caminhoCSV))) {
+                writer.write(csvContent.toString());
+            }
+
+            return true;
+
+        } catch (SQLException | IOException e) {
+            System.out.println("Erro ao exportar despesas: " + e.getMessage());
+            return false;
         }
-    } catch (SQLException e) {
-        return false;
     }
-}
+
+
 
 
     public static void main(String[] args) throws IOException {

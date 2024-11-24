@@ -141,10 +141,6 @@ public class ClientHandler implements Runnable {
                                             );
                                           Servidor.executeQuery(query);
                                           Servidor.startHeartBeat(listeningPort,dbFilePath);
-
-
-
-
                                     } else {
                                         out.println("Erro: Não foi possível alterar o nome do grupo. Verifique se você pertence ao grupo.");
                                     }
@@ -231,7 +227,7 @@ public class ClientHandler implements Runnable {
                                     } else {
                                         out.println("Erro ao obter o histórico ou o utilizador não pertence ao grupo.");
                                     }
-                                }/*+if (command.startsWith("EXPORTAR DESPESAS CSV:")) {
+                                }if (command.startsWith("EXPORTAR DESPESAS CSV:")) {
                                     String[] partes4 = command.split(":");
                                     String nomeGrupo = partes4[1];
                                     String caminhoCSV = partes4[2];
@@ -242,7 +238,8 @@ public class ClientHandler implements Runnable {
                                     } else {
                                         out.println("Erro ao exportar as despesas para CSV ou o utilizador não pertence ao grupo.");
                                     }
-                                }*/
+                                    out.println("FIM EXPORTACAO");
+                                }
                                 if (command.startsWith("OBTER DIVIDAS:")) {
                                     String[] partes5 = command.split(":");
                                     String nomeGrupo = partes5[1];
